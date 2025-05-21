@@ -11,10 +11,10 @@ Este proyecto es una aplicación web desarrollada en React que integra Firebase 
 - Seguridad y autenticación mediante Firebase Authentication .
 
 ## Tecnologías utilizadas
-- React.js
-- Firebase (Firestore, Authentication)
-- Tailwind CSS (opcional, para estilos)
-- Font Awesome (para iconos)
+- React.js.
+- Firebase (Firestore, Authentication).
+- Tailwind CSS.
+- Font Awesome (para iconos).
 
 ## Instalación
 
