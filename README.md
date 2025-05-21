@@ -8,7 +8,7 @@ Este proyecto es una aplicación web desarrollada en React que integra Firebase 
 - Visualización de datos de producción por operario y máquina.
 - Cálculo automático de la eficiencia basada en los datos ingresados.
 - Interfaz intuitiva y fácil de usar.
-- Seguridad y autenticación mediante Firebase Authentication (opcional).
+- Seguridad y autenticación mediante Firebase Authentication .
 
 ## Tecnologías utilizadas
 - React.js
