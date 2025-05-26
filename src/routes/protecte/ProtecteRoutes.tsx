@@ -10,7 +10,7 @@ const PortecteRoutes = (props: PropsWithChildren) => {
     <div>
       <p>Cargando...</p>
     </div>;
-    return <Navigate to={'/login'} />;
+    return <Navigate to={'/'} />;
   }
   return props.children;
 };
