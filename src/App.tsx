@@ -44,7 +44,18 @@ function App() {
 
             <Route path="/configurations" element={<ConfigurationPage />}>
               <Route path="createMachine" element={<CreateMachine />} />
-              <Route path="createUser" element={<CreateUser />} />
+              <Route
+                path="createUser"
+                element={
+                  <CreateUser
+                    name="username"
+                    label="Username"
+                    type="text"
+                    required={true}
+                    placeholder="Enter username"
+                  />
+                }
+              />
             </Route>
 
             <Route path="data" element={<AdminData />} />
