@@ -32,7 +32,7 @@ const CreateMachine = () => {
       await addDoc(collection(db, 'machines'), form);
       setAlert({
         type: 'success',
-        title: 'Usuario creado',
+        title: 'Maquina creada',
         message: 'Maquina creada correctamente.',
         onClose: () => setAlert(null)
       });
