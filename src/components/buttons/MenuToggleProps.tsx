@@ -13,7 +13,7 @@ const MenuToggleButton: React.FC<MenuToggleProps> = ({ isOpen, toggle }) => {
     <div className="flex justify-end">
       <button
         onClick={toggle}
-        className="flex flex-col items-center p-2 text-black font top-4 left-4 z-50 rounded-2xl hover:text-black-500 cursor-pointer"
+        className="flex flex-col items-center p-2 bg text-white font top-4 left-4 z-50 rounded-2xl hover:text-black-500 cursor-pointer"
       >
         <FontAwesomeIcon icon={faBars} className="mr-2 w-auto" />
         {isOpen ? 'Cerrar Menú' : 'Abrir Menú'}

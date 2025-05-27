@@ -51,7 +51,7 @@ const Menu: React.FC<{ openMenu: boolean }> = ({ openMenu }) => {
       {/* Menú en la derecha, con efecto deslizable */}
       <div
         id="menu"
-        className={`bg-gray-900 min-h-screen z-10 text-slate-300 w-64 fixed top-0 h-screen overflow-y-scroll transition-transform duration-300 ease-in-out  ${openMenu ? 'translate-x-0' : 'translate-x-1'} right-0`}
+        className={`bg-gray-900 min-h-screen z-10 text-slate-300 w-64 fixed top-0 h-screen overflow-y-scroll transition-transform duration-300 ease-in-out  ${openMenu ? 'translate-x-1' : 'translate-x-1'} right-1`}
       >
         <div id="logo" className="my-4 px-6">
           <h1 className="text-lg md:text-2xl font-bold text-white">

@@ -1,9 +1,28 @@
 const F1315 = () => {
   return (
     <>
+      {/* Buscar operario */}
+      <div className="flex justify-center items-center p-5 w-full rounded-2xl ">
+        <input
+          type="number"
+          placeholder="Buscar operario..."
+          className="w-full max-w-lg p-3 bg-gray-200 text-blue-950 border border-blue-950 rounded focus:outline-none focus:bg-white"
+        />
+      </div>
       <div className="flex p-5 w-full justify-center bg-gray-200 rounded-2xl backgroundForm">
         <form className="w-full max-w-lg text-white">
-          {/* Tus campos existentes */}
+          <div>
+            <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
+              Maquina
+            </label>
+            <input
+              className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
+              type="text"
+              placeholder="Maquina"
+              readOnly
+              value="Maquina 1"
+            />
+          </div>
           <div className="flex flex-wrap -mx-3 mb-6">
             <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
               <label
@@ -85,7 +104,7 @@ const F1315 = () => {
                 Total horas
               </label>
               <input
-                className="appearance-none block w-full text-blue-950 bg-gray-200 text-red-700 border border-red-500 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
+                className="appearance-none block w-full  bg-gray-200 text-red-700 border border-red-500 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
                 id="code"
                 type="text"
                 placeholder="0"
