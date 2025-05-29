@@ -21,7 +21,9 @@ const AssignMachines = () => {
   const [operatorName, setOperatorName] = useState('');
   const [selectedMachines, setSelectedMachines] = useState<string[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [operators, setOperators] = useState();
+  const [, setOperators] = useState<{ id: string; [key: string]: unknown }[]>(
+    []
+  );
 
   useEffect(() => {
     const fetchMachines = async () => {
@@ -40,8 +42,7 @@ const AssignMachines = () => {
           id: doc.id,
           ...doc.data()
         }));
-        console.log(dataUser);
-        setOperators(operators);
+        setOperators(dataUser);
       } catch (error) {
         console.error('Error al obtener máquinas:', error);
       }
@@ -100,13 +101,14 @@ const AssignMachines = () => {
             {machines &&
               machines.map((machine) =>
                 machine.abbreviation ? (
-                  <div key={machine.abbreviation}>
+                  <div key={machine.id}>
                     <input
                       type="checkbox"
-                      id={machine.abbreviation}
+                      id={machine.id} // usar el id único del doc
                       onChange={() =>
                         handleCheckboxChange(machine.abbreviation!)
                       }
+                      checked={selectedMachines.includes(machine.abbreviation!)}
                     />
                     <label className="pl-2" htmlFor={machine.id}>
                       {machine.abbreviation}

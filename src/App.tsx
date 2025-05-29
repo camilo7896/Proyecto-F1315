@@ -56,6 +56,10 @@ function App() {
                   />
                 }
               />
+              <Route
+                path="editingRegister"
+                element={<EficencePicado editable={true} />}
+              />
             </Route>
 
             <Route path="data" element={<AdminData />} />

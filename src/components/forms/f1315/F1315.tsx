@@ -1,182 +1,231 @@
+import { collection, getDocs, getFirestore, addDoc } from 'firebase/firestore';
+import app from '../../../lib/credentialFirebase';
+import { useEffect, useState } from 'react';
+
+const db = getFirestore(app);
+
+type AssignMachineUser = {
+  id: string;
+  operator: string;
+  machines: string[];
+  timestamp?: string;
+};
+
+type MachineData = {
+  machine: string;
+  horometroInicial: string;
+  horometroFinal: string;
+  observaciones: string;
+};
+
 const F1315 = () => {
+  const [assignMachineUser, setassignMachineUser] = useState<
+    AssignMachineUser[]
+  >([]);
+  const [operatorCode, setOperatorCode] = useState('');
+  const [filteredMachines, setFilteredMachines] = useState<string[]>([]);
+  const [machineInputs, setMachineInputs] = useState<MachineData[]>([]);
+  const [fecha, setFecha] = useState('');
+  const [horasAsignadas, setHorasAsignadas] = useState('');
+  const [paradasMayores, setParadasMayores] = useState('');
+
+  useEffect(() => {
+    const fetchAssignMachine = async () => {
+      try {
+        const querySnapShot = await getDocs(collection(db, 'assignments'));
+        const data = querySnapShot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data()
+        })) as AssignMachineUser[];
+        setassignMachineUser(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchAssignMachine();
+  }, []);
+
+  const handleSearch = (value: string) => {
+    setOperatorCode(value);
+    const found = assignMachineUser.find((entry) => entry.operator === value);
+    if (found) {
+      setFilteredMachines(found.machines);
+      setMachineInputs(
+        found.machines.map((machine) => ({
+          machine,
+          horometroInicial: '',
+          horometroFinal: '',
+          observaciones: ''
+        }))
+      );
+    } else {
+      setFilteredMachines([]);
+      setMachineInputs([]);
+    }
+  };
+
+  const handleInputChange = (
+    index: number,
+    field: keyof MachineData,
+    value: string
+  ) => {
+    const updated = [...machineInputs];
+    updated[index][field] = value;
+    setMachineInputs(updated);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const payload = {
+      operatorCode,
+      fecha,
+      horasAsignadas,
+      paradasMayores,
+      machines: machineInputs,
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      await addDoc(collection(db, 'registro_horometros'), payload);
+      alert('Datos enviados correctamente ✅');
+    } catch (error) {
+      console.error('Error al guardar en Firestore:', error);
+      alert('Error al guardar los datos ❌');
+    }
+  };
+
   return (
     <>
-      {/* Buscar operario */}
-      <div className="flex justify-center items-center p-5 w-full rounded-2xl ">
-        <input
-          type="number"
-          placeholder="Buscar operario..."
-          className="w-full max-w-lg p-3 bg-gray-200 text-blue-950 border border-blue-950 rounded focus:outline-none focus:bg-white"
-        />
-      </div>
       <div className="flex p-5 w-full justify-center bg-gray-200 rounded-2xl backgroundForm">
-        <form className="w-full max-w-lg text-white">
-          <div>
-            <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
-              Maquina
-            </label>
-            <input
-              className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-              type="text"
-              placeholder="Maquina"
-              readOnly
-              value="Maquina 1"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="w-full max-w-lg text-white">
+          {/* Fecha y operador */}
           <div className="flex flex-wrap -mx-3 mb-6">
             <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="grid-first-name"
-              >
+              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
                 Fecha
               </label>
               <input
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                id="grid-first-name"
                 type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+                required
               />
             </div>
             <div className="w-full md:w-1/2 px-3">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="code"
-              >
-                Codigo de operario
+              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
+                Código de operario
               </label>
               <input
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                id="code"
                 type="number"
+                value={operatorCode}
+                onChange={(e) => handleSearch(e.target.value)}
                 placeholder="000"
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+                required
               />
             </div>
           </div>
-          {/* Otros campos */}
+
+          {/* Horas y paradas */}
           <div className="flex flex-wrap -mx-3 mb-6">
             <div className="w-full md:w-1/2 px-3">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="code"
-              >
-                Codigo de operario
-              </label>
-              <input
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border  border-blue-950 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                id="code"
-                type="number"
-                placeholder="000"
-              />
-            </div>
-            <div className="w-full md:w-1/2 px-3">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="code"
-              >
+              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
                 Horas asignadas
               </label>
               <input
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                id="code"
                 type="text"
+                value={horasAsignadas}
+                onChange={(e) => setHorasAsignadas(e.target.value)}
                 placeholder="0"
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+                required
               />
             </div>
             <div className="w-full md:w-1/2 px-3">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="code"
-              >
+              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
                 Paradas mayores
               </label>
               <input
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                id="code"
                 type="text"
+                value={paradasMayores}
+                onChange={(e) => setParadasMayores(e.target.value)}
                 placeholder="0"
-              />
-            </div>
-            <div className="w-full md:w-1/2 px-3">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="code"
-              >
-                Total horas
-              </label>
-              <input
-                className="appearance-none block w-full  bg-gray-200 text-red-700 border border-red-500 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                id="code"
-                type="text"
-                placeholder="0"
-                readOnly
-                value={0.0}
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+                required
               />
             </div>
           </div>
-          {/* Otros campos */}
-          <div className="flex flex-wrap -mx-3 mb-2">
-            <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="grid-city"
-              >
-                Horometro inicial
-              </label>
-              <input
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                id="HourStart"
-                type="number"
-                placeholder="00000000"
-              />
-            </div>
-            <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="machine"
-              >
-                Maquina
-              </label>
-              <div className="relative">
-                <select
-                  className="block appearance-none w-full bg-gray-200 border border-gray-200 text-blue-950 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                  id="machine"
-                >
-                  <option>Punt 1</option>
-                  <option>Punt 2</option>
-                  <option>Punt 2</option>
-                </select>
+
+          {/* Máquinas asignadas */}
+          {machineInputs.map((machineData, index) => (
+            <div
+              key={index}
+              className="flex flex-wrap -mx-3 border border-amber-400 p-3 mb-2"
+            >
+              <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
+                <label className="block uppercase text-white text-xs font-bold mb-2">
+                  Horómetro inicial
+                </label>
+                <input
+                  type="number"
+                  placeholder="00000000"
+                  value={machineData.horometroInicial}
+                  onChange={(e) =>
+                    handleInputChange(index, 'horometroInicial', e.target.value)
+                  }
+                  className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
+                  required
+                />
+              </div>
+
+              <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
+                <label className="block uppercase text-white text-xs font-bold mb-2">
+                  Máquina
+                </label>
+                <input
+                  type="text"
+                  value={machineData.machine}
+                  readOnly
+                  className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
+                  required
+                />
+              </div>
+
+              <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
+                <label className="block uppercase text-white text-xs font-bold mb-2">
+                  Horómetro final
+                </label>
+                <input
+                  type="number"
+                  placeholder="00000000"
+                  value={machineData.horometroFinal}
+                  onChange={(e) =>
+                    handleInputChange(index, 'horometroFinal', e.target.value)
+                  }
+                  className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
+                  required
+                />
+              </div>
+
+              <div className="w-full px-3">
+                <label className="block uppercase text-white text-xs font-bold mb-2">
+                  Observaciones
+                </label>
+                <textarea
+                  placeholder="..."
+                  value={machineData.observaciones}
+                  onChange={(e) =>
+                    handleInputChange(index, 'observaciones', e.target.value)
+                  }
+                  className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+                />
               </div>
             </div>
-            <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="grid-zip"
-              >
-                Horometro final
-              </label>
-              <input
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                id="hourEnd"
-                type="number"
-                placeholder="00000000"
-              />
-            </div>
+          ))}
 
-            <div className="w-full  px-3">
-              <label
-                className="block uppercase tracking-wide text-white text-xs font-bold mb-2"
-                htmlFor="code"
-              >
-                Observaciones
-              </label>
-              <textarea
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white"
-                id="code"
-                placeholder="..."
-              />
-            </div>
-          </div>
-          {/* Botón de enviar */}
+          {/* Botón enviar */}
           <div className="flex justify-center mt-4">
             <button
               type="submit"
