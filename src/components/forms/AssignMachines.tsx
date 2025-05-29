@@ -33,7 +33,6 @@ const AssignMachines = () => {
           id: doc.id,
           ...doc.data()
         }));
-        console.log(data);
         setMachines(data);
 
         // Consultar usuarios

@@ -1,3 +1,9 @@
+import DataExport from '../../components/exportData/DataExport';
+
 export default function AdminData() {
-  return <div>AdminData</div>;
+  return (
+    <div>
+      <DataExport />
+    </div>
+  );
 }

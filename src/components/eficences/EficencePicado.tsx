@@ -269,7 +269,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
                         )}
                       </td>
                     )}
-                    {/* Icono para mostrar tooltip */}
+                    {/* Icono para tooltip */}
                     <td className="px-3 py-2 border relative">
                       {entry.editadoPor && (
                         <span
@@ -284,59 +284,69 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
                   </tr>
                   {/* Tooltip */}
                   {hoverInfo === entry && hoverPosition && (
-                    <div
-                      className="fixed bg-white border border-gray-300 rounded shadow-lg p-3 max-w-sm z-50"
-                      style={{
-                        top: hoverPosition.y,
-                        left: hoverPosition.x,
-                        transform: 'translateY(-50%)'
-                      }}
-                    >
-                      <div className="text-sm font-semibold mb-2">
-                        Información de edición
-                      </div>
-                      <div className="text-sm mb-1">
-                        <strong>Por:</strong> {entry.editadoPor}
-                      </div>
-                      <div className="text-sm mb-1">
-                        <strong>Fecha:</strong> {entry.fechaUltimaEdicion}
-                      </div>
-                      <div className="text-sm mb-2 font-semibold">
-                        Cambios en máquinas:
-                      </div>
-                      {/* Mostrar cambios en las máquinas */}
-                      {entry.machines.map((machine, index) => {
-                        const originalMachine = entry.originalMachines?.[index];
-                        return (
-                          <div key={index} className="mb-2 border-t pt-2">
-                            <div className="font-semibold mb-1">
-                              Máquina: {machine.machine}
-                            </div>
-                            {/* Horómetro Inicial */}
-                            <div className="flex justify-between mb-1 text-gray-700">
-                              <div>Horómetro Inicial:</div>
-                              <div>
-                                {originalMachine?.horometroInicial} →{' '}
-                                {machine.horometroInicial}
-                              </div>
-                            </div>
-                            {/* Horómetro Final */}
-                            <div className="flex justify-between mb-1 text-gray-700">
-                              <div>Horómetro Final:</div>
-                              <div>
-                                {originalMachine?.horometroFinal} →{' '}
-                                {machine.horometroFinal}
-                              </div>
-                            </div>
-                            {/* Observaciones */}
-                            <div className="text-gray-700 mb-1">
-                              Observaciones: {originalMachine?.observaciones} →{' '}
-                              {machine.observaciones}
-                            </div>
+                    <tr>
+                      <td
+                        colSpan={
+                          12 /* ajusta a la cantidad total de columnas */
+                        }
+                      >
+                        <div
+                          className="fixed bg-white border border-gray-300 rounded shadow-lg p-3 max-w-sm z-50"
+                          style={{
+                            top: hoverPosition.y,
+                            left: hoverPosition.x,
+                            transform: 'translateY(-50%)'
+                          }}
+                        >
+                          <div className="text-sm font-semibold mb-2">
+                            Información de edición
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="text-sm mb-1">
+                            <strong>Por:</strong> {entry.editadoPor}
+                          </div>
+                          <div className="text-sm mb-1">
+                            <strong>Fecha:</strong> {entry.fechaUltimaEdicion}
+                          </div>
+                          <div className="text-sm mb-2 font-semibold">
+                            Cambios en máquinas:
+                          </div>
+                          {/* Mostrar cambios en las máquinas */}
+                          {entry.machines.map((machine, index) => {
+                            const originalMachine =
+                              entry.originalMachines?.[index];
+                            return (
+                              <div key={index} className="mb-2 border-t pt-2">
+                                <div className="font-semibold mb-1">
+                                  Máquina: {machine.machine}
+                                </div>
+                                {/* Horómetro Inicial */}
+                                <div className="flex justify-between mb-1 text-gray-700">
+                                  <div>Horómetro Inicial:</div>
+                                  <div>
+                                    {originalMachine?.horometroInicial} →{' '}
+                                    {machine.horometroInicial}
+                                  </div>
+                                </div>
+                                {/* Horómetro Final */}
+                                <div className="flex justify-between mb-1 text-gray-700">
+                                  <div>Horómetro Final:</div>
+                                  <div>
+                                    {originalMachine?.horometroFinal} →{' '}
+                                    {machine.horometroFinal}
+                                  </div>
+                                </div>
+                                {/* Observaciones */}
+                                <div className="text-gray-700 mb-1">
+                                  Observaciones:{' '}
+                                  {originalMachine?.observaciones} →{' '}
+                                  {machine.observaciones}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    </tr>
                   )}
                 </React.Fragment>
               );
