@@ -23,7 +23,7 @@ const F1315 = () => {
     AssignMachineUser[]
   >([]);
   const [operatorCode, setOperatorCode] = useState('');
-  const [filteredMachines, setFilteredMachines] = useState<string[]>([]);
+  const [, setFilteredMachines] = useState<string[]>([]);
   const [machineInputs, setMachineInputs] = useState<MachineData[]>([]);
   const [fecha, setFecha] = useState('');
   const [horasAsignadas, setHorasAsignadas] = useState('');
