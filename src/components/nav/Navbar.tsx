@@ -1,6 +1,9 @@
 import React from 'react';
 import MenuToggleButton from '../buttons/MenuToggleProps';
 import { AuthContext } from '../../context/AuthContextType';
+import { Link } from 'react-router-dom';
+import { faHouse } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const Navbar = () => {
   const { openMenu, toogleMenu } = React.useContext(AuthContext) || {};
@@ -11,6 +14,15 @@ const Navbar = () => {
           isOpen={!!openMenu}
           toggle={toogleMenu || (() => {})}
         />
+        <div>
+          <Link
+            to="/home"
+            className=" text-white p-2 flex flex-col rounded shadow hover:bg-gray-600 transition"
+          >
+            <FontAwesomeIcon icon={faHouse} style={{ color: '#fcfcfc' }} />
+            <small>Inicio</small>
+          </Link>
+        </div>
       </div>
     </>
   );

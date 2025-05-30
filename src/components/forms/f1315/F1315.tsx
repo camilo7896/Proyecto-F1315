@@ -15,6 +15,7 @@ type MachineData = {
   machine: string;
   horometroInicial: string;
   horometroFinal: string;
+  horasAsignadas: string;
   observaciones: string;
 };
 
@@ -26,7 +27,6 @@ const F1315 = () => {
   const [, setFilteredMachines] = useState<string[]>([]);
   const [machineInputs, setMachineInputs] = useState<MachineData[]>([]);
   const [fecha, setFecha] = useState('');
-  const [horasAsignadas, setHorasAsignadas] = useState('');
   const [paradasMayores, setParadasMayores] = useState('');
 
   useEffect(() => {
@@ -55,6 +55,7 @@ const F1315 = () => {
           machine,
           horometroInicial: '',
           horometroFinal: '',
+          horasAsignadas: '',
           observaciones: ''
         }))
       );
@@ -77,18 +78,24 @@ const F1315 = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Convertir horasAsignadas a número, con validación para '' a 0
+    const machinesWithNumbers = machineInputs.map((m) => ({
+      ...m,
+      horasAsignadas: m.horasAsignadas === '' ? 0 : Number(m.horasAsignadas)
+    }));
+
     const payload = {
       operatorCode,
       fecha,
-      horasAsignadas,
       paradasMayores,
-      machines: machineInputs,
+      machines: machinesWithNumbers,
       timestamp: new Date().toISOString()
     };
 
     try {
       await addDoc(collection(db, 'registro_horometros'), payload);
       alert('Datos enviados correctamente ✅');
+      // Opcional: limpiar formulario o mantenerlo según convenga
     } catch (error) {
       console.error('Error al guardar en Firestore:', error);
       alert('Error al guardar los datos ❌');
@@ -96,147 +103,146 @@ const F1315 = () => {
   };
 
   return (
-    <>
-      <div className="flex p-5 w-full justify-center bg-gray-200 rounded-2xl backgroundForm">
-        <form onSubmit={handleSubmit} className="w-full max-w-lg text-white">
-          {/* Fecha y operador */}
-          <div className="flex flex-wrap -mx-3 mb-6">
-            <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
-              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
-                Fecha
-              </label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
-                required
-              />
-            </div>
-            <div className="w-full md:w-1/2 px-3">
-              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
-                Código de operario
-              </label>
-              <input
-                type="number"
-                value={operatorCode}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="000"
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
-                required
-              />
-            </div>
+    <div className="flex p-5 w-full justify-center bg-gray-200 rounded-2xl backgroundForm">
+      <form onSubmit={handleSubmit} className="w-full max-w-lg text-white">
+        {/* Fecha y operador */}
+        <div className="flex flex-wrap -mx-3 mb-6">
+          <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+            <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
+              Fecha
+            </label>
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+              required
+            />
           </div>
+          <div className="w-full md:w-1/2 px-3">
+            <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
+              Código de operario
+            </label>
+            <input
+              type="number"
+              value={operatorCode}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="000"
+              className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+              required
+            />
+          </div>
+        </div>
 
-          {/* Horas y paradas */}
-          <div className="flex flex-wrap -mx-3 mb-6">
-            <div className="w-full md:w-1/2 px-3">
-              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
+        {/* Paradas mayores */}
+        <div className="mb-6 px-3">
+          <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
+            Paradas mayores
+          </label>
+          <input
+            type="text"
+            value={paradasMayores}
+            onChange={(e) => setParadasMayores(e.target.value)}
+            placeholder="0"
+            className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+            required
+          />
+        </div>
+
+        {/* Máquinas asignadas */}
+        {machineInputs.map((machineData, index) => (
+          <div
+            key={index}
+            className="flex flex-wrap -mx-3 border border-amber-400 p-3 mb-2"
+          >
+            <div className="w-full md:w-1/2 px-3 mb-6">
+              <label className="block uppercase text-white text-xs font-bold mb-2">
+                Máquina
+              </label>
+              <input
+                type="text"
+                value={machineData.machine}
+                readOnly
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
+              />
+            </div>
+
+            <div className="w-full md:w-1/2 px-3 mb-6">
+              <label className="block uppercase text-white text-xs font-bold mb-2">
                 Horas asignadas
               </label>
               <input
-                type="text"
-                value={horasAsignadas}
-                onChange={(e) => setHorasAsignadas(e.target.value)}
+                type="number"
+                min={0}
                 placeholder="0"
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+                value={machineData.horasAsignadas}
+                onChange={(e) =>
+                  handleInputChange(index, 'horasAsignadas', e.target.value)
+                }
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
                 required
               />
             </div>
-            <div className="w-full md:w-1/2 px-3">
-              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
-                Paradas mayores
+
+            <div className="w-full md:w-1/2 px-3 mb-6">
+              <label className="block uppercase text-white text-xs font-bold mb-2">
+                Horómetro inicial
               </label>
               <input
-                type="text"
-                value={paradasMayores}
-                onChange={(e) => setParadasMayores(e.target.value)}
-                placeholder="0"
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+                type="number"
+                placeholder="00000000"
+                value={machineData.horometroInicial}
+                onChange={(e) =>
+                  handleInputChange(index, 'horometroInicial', e.target.value)
+                }
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
                 required
               />
             </div>
-          </div>
 
-          {/* Máquinas asignadas */}
-          {machineInputs.map((machineData, index) => (
-            <div
-              key={index}
-              className="flex flex-wrap -mx-3 border border-amber-400 p-3 mb-2"
-            >
-              <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
-                <label className="block uppercase text-white text-xs font-bold mb-2">
-                  Horómetro inicial
-                </label>
-                <input
-                  type="number"
-                  placeholder="00000000"
-                  value={machineData.horometroInicial}
-                  onChange={(e) =>
-                    handleInputChange(index, 'horometroInicial', e.target.value)
-                  }
-                  className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
-                  required
-                />
-              </div>
-
-              <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
-                <label className="block uppercase text-white text-xs font-bold mb-2">
-                  Máquina
-                </label>
-                <input
-                  type="text"
-                  value={machineData.machine}
-                  readOnly
-                  className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
-                  required
-                />
-              </div>
-
-              <div className="w-full md:w-1/3 px-3 mb-6 md:mb-0">
-                <label className="block uppercase text-white text-xs font-bold mb-2">
-                  Horómetro final
-                </label>
-                <input
-                  type="number"
-                  placeholder="00000000"
-                  value={machineData.horometroFinal}
-                  onChange={(e) =>
-                    handleInputChange(index, 'horometroFinal', e.target.value)
-                  }
-                  className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
-                  required
-                />
-              </div>
-
-              <div className="w-full px-3">
-                <label className="block uppercase text-white text-xs font-bold mb-2">
-                  Observaciones
-                </label>
-                <textarea
-                  placeholder="..."
-                  value={machineData.observaciones}
-                  onChange={(e) =>
-                    handleInputChange(index, 'observaciones', e.target.value)
-                  }
-                  className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
-                />
-              </div>
+            <div className="w-full md:w-1/2 px-3 mb-6">
+              <label className="block uppercase text-white text-xs font-bold mb-2">
+                Horómetro final
+              </label>
+              <input
+                type="number"
+                placeholder="00000000"
+                value={machineData.horometroFinal}
+                onChange={(e) =>
+                  handleInputChange(index, 'horometroFinal', e.target.value)
+                }
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-gray-200 rounded py-3 px-4"
+                required
+              />
             </div>
-          ))}
 
-          {/* Botón enviar */}
-          <div className="flex justify-center mt-4">
-            <button
-              type="submit"
-              className="cursor-pointer w-full py-2 rounded bg-blue-600 hover:bg-blue-800 transition-colors duration-300 text-white font-semibold"
-            >
-              Enviar
-            </button>
+            <div className="w-full px-3">
+              <label className="block uppercase text-white text-xs font-bold mb-2">
+                Observaciones
+              </label>
+              <textarea
+                placeholder="..."
+                value={machineData.observaciones}
+                onChange={(e) =>
+                  handleInputChange(index, 'observaciones', e.target.value)
+                }
+                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+              />
+            </div>
           </div>
-        </form>
-      </div>
-    </>
+        ))}
+
+        {/* Botón enviar */}
+        <div className="flex justify-center mt-4">
+          <button
+            type="submit"
+            className="cursor-pointer w-full py-2 rounded bg-blue-600 hover:bg-blue-800 transition-colors duration-300 text-white font-semibold"
+          >
+            Enviar
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 
