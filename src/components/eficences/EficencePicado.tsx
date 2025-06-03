@@ -5,13 +5,15 @@ import {
   doc,
   updateDoc
 } from 'firebase/firestore';
-import '../../App.scss';
+import { getAuth } from 'firebase/auth';
+
 import app from '../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
 
 const db = getFirestore(app);
 
 type Machine = {
+  horasAsignadas: string | number; // ahora se trata como decimal
   horometroFinal: string;
   horometroInicial: string;
   machine: string;
@@ -21,7 +23,6 @@ type Machine = {
 type Registro = {
   id: string;
   fecha: string;
-  horasAsignadas: number;
   operatorCode: string;
   machines: Machine[];
   reference?: string;
@@ -33,24 +34,44 @@ type Registro = {
   originalMachines?: Machine[];
 };
 
-interface EficencePicadoProps {
-  editable?: boolean;
-}
-
-const EficencePicado: React.FC<EficencePicadoProps> = ({
+const EficencePicado: React.FC<{ editable?: boolean }> = ({
   editable = false
 }) => {
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<Machine>>({});
-  const [editHorasAsignadas, setEditHorasAsignadas] = useState<string>('');
+  const [editHoras, setEditHoras] = useState<string>(''); // valor decimal como string
   const [hoverInfo, setHoverInfo] = useState<Registro | null>(null);
+  const [machineStandards, setMachineStandards] = useState<
+    Record<string, string>
+  >({});
   const [hoverPosition, setHoverPosition] = useState<{
     x: number;
     y: number;
   } | null>(null);
 
-  const currentUser = 'Juan Pérez';
+  // Estado para filtro por mes
+  const [mesFiltro, setMesFiltro] = useState<string>(() => {
+    const ahora = new Date();
+    return ahora.toISOString().slice(0, 7); // "YYYY-MM"
+  });
+
+  const fetchMachineStandards = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'machines'));
+      const standards: Record<string, string> = {};
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Asumimos que los campos son: machineName, efficiency
+        if (data.abbreviation && data.efficiency) {
+          standards[data.abbreviation] = data.efficiency;
+        }
+      });
+      setMachineStandards(standards);
+    } catch (error) {
+      console.error('Error fetching machine standards:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,18 +81,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
         );
         const data = querySnapshot.docs.map((doc) => {
           const rest = doc.data() as Omit<Registro, 'id'>;
-          // Asegurar que horasAsignadas sea un número válido
-          const horas =
-            typeof rest.horasAsignadas === 'number'
-              ? rest.horasAsignadas
-              : Number(rest.horasAsignadas);
-
-          return {
-            id: doc.id,
-            ...rest,
-            horasAsignadas: isNaN(horas) ? 0 : horas,
-            originalMachines: rest.machines
-          };
+          return { id: doc.id, ...rest };
         });
         setRegistros(data);
       } catch (error) {
@@ -79,28 +89,45 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
       }
     };
     fetchData();
+    fetchMachineStandards();
   }, []);
+
+  // Filtrar registros por mes seleccionado
+  const registrosFiltrados = registros.filter((reg) => {
+    const fechaMes = reg.fecha.slice(0, 7); // "YYYY-MM"
+    return fechaMes === mesFiltro;
+  });
 
   const handleEdit = (registro: Registro, machineIndex: number) => {
     setEditId(registro.id + '-' + machineIndex);
-    setEditData(registro.machines[machineIndex]);
-    setEditHorasAsignadas(
-      registro.horasAsignadas != null ? String(registro.horasAsignadas) : '0'
-    );
+    const machine = registro.machines[machineIndex];
+    setEditData(machine);
+    setEditHoras(String(machine.horasAsignadas));
   };
 
-  const handleChange = (field: string, value: string) => {
-    setEditData((prev) => ({ ...prev, [field]: value }));
+  const handleHorasChange = (value: string) => {
+    setEditHoras(value);
   };
 
   const handleSave = async (registroId: string, machineIndex: number) => {
+    const auth = getAuth(app);
+    const user = auth.currentUser;
+    const currentUser = user && user.email ? user.email : 'usuario_desconocido';
+
     const index = registros.findIndex((r) => r.id === registroId);
     if (index === -1) return;
     const registro = registros[index];
     const newMachines = [...registro.machines];
     const originalMachine = registro.originalMachines?.[machineIndex];
 
+    const horasDecimal = parseFloat(editHoras);
+    if (isNaN(horasDecimal)) {
+      alert('Por favor ingresa un número válido para horas.');
+      return;
+    }
+
     newMachines[machineIndex] = {
+      horasAsignadas: horasDecimal,
       horometroFinal:
         editData.horometroFinal ?? originalMachine?.horometroFinal ?? '',
       horometroInicial:
@@ -110,31 +137,33 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
         editData.observaciones ?? originalMachine?.observaciones ?? ''
     };
 
+    // Campos modificados
     const camposModificados: string[] = [];
     (
       [
         'horometroInicial',
         'horometroFinal',
         'machine',
-        'observaciones'
+        'observaciones',
+        'horasAsignadas'
       ] as (keyof Machine)[]
     ).forEach((k) => {
-      if ((editData[k] ?? originalMachine?.[k]) !== originalMachine?.[k]) {
-        camposModificados.push(k);
+      const originalVal = originalMachine?.[k];
+      const newVal = newMachines[machineIndex][k];
+      if (k === 'horasAsignadas') {
+        if (parseFloat(String(originalVal)) !== horasDecimal) {
+          camposModificados.push(k);
+        }
+      } else {
+        if (newVal !== originalVal) {
+          camposModificados.push(k);
+        }
       }
     });
 
-    let horasAsignadasActualizada = registro.horasAsignadas;
-    const horasNum = Number(editHorasAsignadas);
-    if (!isNaN(horasNum) && horasNum !== registro.horasAsignadas) {
-      camposModificados.push('horasAsignadas');
-      horasAsignadasActualizada = horasNum;
-    }
-
     const updateData: Partial<Registro> = {
       machines: newMachines,
-      horasAsignadas: horasAsignadasActualizada,
-      editadoPor: currentUser,
+      editadoPor: currentUser ?? undefined,
       camposModificados: camposModificados.join(', '),
       fechaUltimaEdicion: new Date().toISOString()
     };
@@ -142,6 +171,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
     try {
       const docRef = doc(db, 'registro_horometros', registroId);
       await updateDoc(docRef, updateData);
+      // Actualizar localmente
       const newRegistros = [...registros];
       newRegistros[index] = {
         ...registro,
@@ -151,26 +181,45 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
       setRegistros(newRegistros);
       setEditId(null);
     } catch (error) {
-      console.error('Error updating document:', error);
+      console.error('Error al guardar:', error);
     }
   };
 
-  const handleMouseEnter = (
+  const handleMouseClick = (
     registro: Registro,
     e: React.MouseEvent<HTMLSpanElement>
   ) => {
+    console.log('click en', registro);
     const rect = e.currentTarget.getBoundingClientRect();
-    setHoverPosition({ x: rect.right + 10, y: rect.top });
+    console.log('rect', rect);
+    setHoverPosition({ x: rect.right + -350, y: rect.top });
     setHoverInfo(registro);
   };
 
   const handleMouseLeave = () => {
+    console.log('hover end');
     setHoverInfo(null);
     setHoverPosition(null);
   };
 
+  // Mostrar en pantalla el valor decimal
+  const mostrarHoras = (valor: string | number) => {
+    return typeof valor === 'number' ? valor.toFixed(2) : String(valor);
+  };
+
   return (
-    <div className="p-6 w-full bg-white rounded-lg shadow-lg overflow-x-auto relative">
+    <div className="p-6 w-full bg-white rounded-lg border border-gray-200 shadow-lg overflow-x-auto relative">
+      {/* Selector de mes */}
+      <div className="flex items-center mb-4">
+        <span className="mr-4 font-semibold">Filtrar por mes:</span>
+        <input
+          type="month"
+          value={mesFiltro}
+          onChange={(e) => setMesFiltro(e.target.value)}
+          className="border p-1 rounded"
+        />
+      </div>
+
       <h2 className="text-xl font-bold mb-4">Eficencias</h2>
       <table className="min-w-full border border-gray-300 text-sm text-left">
         <thead className="backgroundForm text-white">
@@ -183,80 +232,57 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
             <th className="px-3 py-2 border">Referencia</th>
             <th className="px-3 py-2 border">Paradas mayores</th>
             <th className="px-3 py-2 border">Observaciones</th>
-            {/* Mostrar horas asignadas con valor por defecto */}
-            <th className="px-3 py-2 border">Horas asignadas</th>
+            {/* Mostrar horas en decimal */}
+            <th className="px-3 py-2 border">Horas Asignadas</th>
+            {/* Mostrar total horas */}
             <th className="px-3 py-2 border">Total horas</th>
+            {/* Eficence */}
+            <th className="px-3 py-2 border">Stand</th>
+            <th className="px-3 py-2 border">Eficiencia</th>
+
             {editable && <th className="px-3 py-2 border">Acciones</th>}
             <th className="px-3 py-2 border">📝</th>
           </tr>
         </thead>
         <tbody>
-          {registros.map((entry) =>
+          {registrosFiltrados.map((entry) =>
             entry.machines?.map((machine, index) => {
               const horoFin = parseFloat(machine.horometroFinal);
               const horoIni = parseFloat(machine.horometroInicial);
               const totalHoras =
                 isNaN(horoFin) || isNaN(horoIni) ? 0 : horoFin - horoIni;
 
-              let rowColor = '';
-              if (totalHoras < -5) rowColor = 'bg-red-400';
-              else if (totalHoras < 5) rowColor = 'bg-yellow-400';
-              else rowColor = 'bg-green-400';
-
               const isEditing = editId === entry.id + '-' + index;
 
               return (
-                <tr
-                  key={`${entry.id}-${index}`}
-                  className={`hover:bg-gray-100 ${rowColor}`}
-                >
+                <tr key={`${entry.id}-${index}`} className="hover:bg-gray-100">
                   <td className="px-3 py-2 border">{entry.fecha}</td>
                   <td className="px-3 py-2 border">{entry.operatorCode}</td>
                   <td className="px-3 py-2 border">{machine.machine}</td>
                   <td className="px-3 py-2 border">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={
-                          editData.horometroInicial ?? machine.horometroInicial
-                        }
-                        onChange={(e) =>
-                          handleChange('horometroInicial', e.target.value)
-                        }
-                        className="w-full border p-1"
-                      />
-                    ) : (
-                      machine.horometroInicial
-                    )}
+                    {machine.horometroInicial}
                   </td>
-
-                  <td className="px-3 py-2 border">
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={
-                          editData.horometroFinal ?? machine.horometroFinal
-                        }
-                        onChange={(e) =>
-                          handleChange('horometroFinal', e.target.value)
-                        }
-                        className="w-full border p-1"
-                      />
-                    ) : (
-                      machine.horometroFinal
-                    )}
-                  </td>
+                  <td className="px-3 py-2 border">{machine.horometroFinal}</td>
                   <td className="px-3 py-2 border">{entry.reference || ''}</td>
                   <td className="px-3 py-2 border">{entry.majorStops || ''}</td>
-
                   <td className="px-3 py-2 border">{machine.observaciones}</td>
-                  {/* Mostrar horas asignadas con valor por defecto */}
+                  {/* Mostrar en decimal */}
                   <td className="px-3 py-2 border">
-                    {entry.horasAsignadas != null
-                      ? String(entry.horasAsignadas)
-                      : '0'}
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editHoras}
+                        onChange={(e) => handleHorasChange(e.target.value)}
+                        className="w-full border p-1"
+                        min="0"
+                      />
+                    ) : (
+                      mostrarHoras(machine.horasAsignadas)
+                    )}
                   </td>
-                  <td className="px-3 py-2 border">{totalHoras.toFixed(1)}</td>
+                  {/* Total horas */}
+                  <td className="px-3 py-2 border">{totalHoras.toFixed(2)}</td>
                   {editable && (
                     <td className="px-3 py-2 border">
                       {isEditing ? (
@@ -276,11 +302,45 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
                       )}
                     </td>
                   )}
+                  {/* Standard*/}
+                  <td className="px-3 py-2 border">
+                    {' '}
+                    {machineStandards[machine.machine] ?? 'N/A'}
+                  </td>
+                  {/* Efficence total */}
+                  {/* Mostrar en la celda de "Eficiencia total" */}
+                  <td className="px-3 py-2 border">
+                    {(() => {
+                      const horasTotales =
+                        isNaN(horoFin) || isNaN(horoIni)
+                          ? 0
+                          : horoFin - horoIni;
+                      const standardStr =
+                        machineStandards[machine.machine] ?? '0';
+                      const standard = parseFloat(standardStr);
+                      const horasAsignadas =
+                        typeof machine.horasAsignadas === 'string'
+                          ? parseFloat(machine.horasAsignadas)
+                          : machine.horasAsignadas;
+
+                      if (
+                        isNaN(horasTotales) ||
+                        isNaN(standard) ||
+                        isNaN(horasAsignadas)
+                      ) {
+                        return '0';
+                      }
+
+                      const eficiencia =
+                        horasTotales - standard * horasAsignadas;
+                      return eficiencia.toFixed(2);
+                    })()}
+                  </td>
                   <td className="px-3 py-2 border relative">
                     {entry.editadoPor && (
                       <span
                         className="cursor-pointer"
-                        onMouseEnter={(e) => handleMouseEnter(entry, e)}
+                        onMouseEnter={(e) => handleMouseClick(entry, e)}
                         onMouseLeave={handleMouseLeave}
                       >
                         👤
@@ -305,9 +365,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = ({
           <div>
             <strong>Editado por:</strong> {hoverInfo.editadoPor}
           </div>
-          <div>
-            <strong>Campos modificados:</strong> {hoverInfo.camposModificados}
-          </div>
+
           <div>
             <strong>Fecha de edición:</strong>{' '}
             {new Date(hoverInfo.fechaUltimaEdicion ?? '').toLocaleString()}

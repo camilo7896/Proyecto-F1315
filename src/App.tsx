@@ -3,7 +3,6 @@ import LoginPage from './pages/auth/LoginPage';
 import HomePage from './pages/home/HomePage';
 import { AuthProvider } from './context/AuthContextType';
 
-import Picado from './components/picado/Picado';
 import SupervisorPage from './pages/super/Supervisor';
 import PicadoPage from './pages/picado/PicadoPage';
 import EficencePicado from './components/eficences/EficencePicado';
@@ -13,6 +12,7 @@ import ConfigurationPage from './pages/admin-settings/ConfigurationPage';
 import CreateMachine from './components/forms/configComponents/CreateMachine';
 import CreateUser from './components/forms/configComponents/CreateUser';
 import AdminData from './pages/admin-data/AdminData';
+import Picado from './components/picado/Picado';
 
 function App() {
   return (
