@@ -29,3 +29,40 @@
         background-color: gainsboro;
         color: black;
     }
+
+    .imgBanner{
+        position: relative;
+        bottom: 35svh;
+        right: 25svh;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+    }
+    .imgBanner img{
+        width: 60svh;
+    }
+.img1{
+position: absolute;
+right: -15svh;
+top: -0svh;
+}
+.img2{
+    position: absolute;
+    left: 30svh;
+    bottom: -0svh;
+}
+
+
+// MediaQuery
+@media (max-width: 2123px) {
+  .imgBanner {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .imgBanner {
+    display: none;
+  }
+}

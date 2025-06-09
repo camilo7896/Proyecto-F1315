@@ -3,13 +3,16 @@ import appFirebase from '../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import optiondata from './data/optionMenu';
-
+import { doc, getDoc, getFirestore } from 'firebase/firestore';
+import IconUser from '../../../public/user.png';
 interface UserSatate {
   user: string | null;
   photoURL: string | null;
+  role?: string | null;
 }
 
 const auth = getAuth(appFirebase);
+const db = getFirestore(appFirebase);
 const data = optiondata;
 
 const Menu: React.FC<{ openMenu: boolean }> = ({ openMenu }) => {
@@ -20,14 +23,20 @@ const Menu: React.FC<{ openMenu: boolean }> = ({ openMenu }) => {
 
   const navigate = useNavigate();
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (userLogued) => {
+    const unsubscribe = onAuthStateChanged(auth, async (userLogued) => {
       if (userLogued) {
+        const userRef = doc(db, 'users', userLogued.uid);
+        const userSnap = await getDoc(userRef);
+
+        const role = userSnap.exists() ? userSnap.data().role : null;
+
         setstate({
           user: userLogued.displayName || userLogued.email || userLogued.uid,
-          photoURL: userLogued.photoURL || null
+          photoURL: userLogued.photoURL || null,
+          role: role || null
         });
       } else {
-        setstate({ user: null, photoURL: null });
+        setstate({ user: null, photoURL: null, role: null });
       }
     });
     return () => {
@@ -69,18 +78,26 @@ const Menu: React.FC<{ openMenu: boolean }> = ({ openMenu }) => {
                   alt=""
                 />
               ) : (
-                <div>Sin foto</div>
+                <div>
+                  <img className="w-16" src={IconUser} alt="Foto de Usuario" />
+                </div>
               )}
             </span>
             <span className="text-sm md:text-base font-bold">
               {state.user ? (
-                <p>{state.user}</p>
+                <>
+                  <p>{state.user}</p>
+                  <span className="text-xs text-slate-400 italic">
+                    {state.role ? state.role : 'Sin rol'}
+                  </span>
+                </>
               ) : (
                 <p>No hay usuario autenticado</p>
               )}
             </span>
           </a>
         </div>
+
         <div className="flex justify-center items-center pb-5">
           <button
             onClick={handleLogout}

@@ -169,7 +169,7 @@ const F1315 = () => {
           onClick={handleAddRegistro}
           className="w-full py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition"
         >
-          Agregar registro
+          Ver mis maquinas
         </button>
       </div>
 

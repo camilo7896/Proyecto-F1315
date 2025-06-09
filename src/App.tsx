@@ -7,12 +7,12 @@ import SupervisorPage from './pages/super/Supervisor';
 import PicadoPage from './pages/picado/PicadoPage';
 import EficencePicado from './components/eficences/EficencePicado';
 import ProtectedLayout from './layouts/ProtectedLayout'; // nuevo layout
-import PortecteRoutes from './routes/protecte/ProtecteRoutes';
 import ConfigurationPage from './pages/admin-settings/ConfigurationPage';
 import CreateMachine from './components/forms/configComponents/CreateMachine';
 import CreateUser from './components/forms/configComponents/CreateUser';
 import AdminData from './pages/admin-data/AdminData';
 import Picado from './components/picado/Picado';
+import ProtectedRoute from './components/protectedRoutes/ProtectedRoute';
 
 function App() {
   return (
@@ -26,13 +26,22 @@ function App() {
           <Route
             path="/"
             element={
-              <PortecteRoutes>
+              <ProtectedRoute
+                allowedRoles={['admin', 'supervisor', 'operator', 'superadmin']}
+              >
                 <ProtectedLayout />
-              </PortecteRoutes>
+              </ProtectedRoute>
             }
           >
             <Route path="home" element={<HomePage />} />
-            <Route path="supervisor" element={<SupervisorPage />} />
+            <Route
+              path="supervisor"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                  <SupervisorPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="eficencia" element={<EficencePicado />} />
 
             <Route path="picado" element={<PicadoPage />}>
@@ -40,20 +49,43 @@ function App() {
               <Route path="eficence" element={<EficencePicado />} />
             </Route>
 
-            <Route path="/supervisor" element={<SupervisorPage />} />
+            <Route
+              path="/supervisor"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                  <SupervisorPage />
+                </ProtectedRoute>
+              }
+            />
 
-            <Route path="/configurations" element={<ConfigurationPage />}>
-              <Route path="createMachine" element={<CreateMachine />} />
+            <Route
+              path="/configurations"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                  <ConfigurationPage />
+                </ProtectedRoute>
+              }
+            >
+              <Route
+                path="createMachine"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                    <CreateMachine />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="createUser"
                 element={
-                  <CreateUser
-                    name="username"
-                    label="Username"
-                    type="text"
-                    required={true}
-                    placeholder="Enter username"
-                  />
+                  <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                    <CreateUser
+                      name="username"
+                      label="Username"
+                      type="text"
+                      required={true}
+                      placeholder="Enter username"
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route
@@ -62,7 +94,15 @@ function App() {
               />
             </Route>
 
-            <Route path="data" element={<AdminData />} />
+            <Route
+              path="data"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                  <AdminData />
+                </ProtectedRoute>
+              }
+            />
+
             <Route path="*" element={<HomePage />} />
           </Route>
         </Routes>
