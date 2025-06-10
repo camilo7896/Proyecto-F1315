@@ -16,8 +16,13 @@ const optionMenu = [
   },
   {
     title: 'Configuracion',
-    subtitle: 'Ajustes del sistema y parámetros de operación',
+    subtitle: 'Crearción de maquinas, usuarios y edición de registros',
     url: '/configurations'
+  },
+  {
+    title: 'Administrar',
+    subtitle: 'Administracion de la plataforma y asignación de roles',
+    url: '/adminAplication'
   }
 ];
 

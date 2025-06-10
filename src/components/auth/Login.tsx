@@ -58,7 +58,7 @@ const Login: React.FC = () => {
         password
       );
       const user = userCredential.user;
-
+      console.log('Usuario autenticado:', user);
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
       if (!userDoc.exists()) {
@@ -68,11 +68,14 @@ const Login: React.FC = () => {
           role: null
         });
       }
-
       navigate('/home');
     } catch (error) {
-      console.error('Error al iniciar sesión con correo:', error);
-      setError('Correo o contraseña incorrectos.');
+      console.error('Error en login:', error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error desconocido.');
+      }
     }
   };
 

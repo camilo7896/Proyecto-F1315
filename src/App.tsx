@@ -13,6 +13,7 @@ import CreateUser from './components/forms/configComponents/CreateUser';
 import AdminData from './pages/admin-data/AdminData';
 import Picado from './components/picado/Picado';
 import ProtectedRoute from './components/protectedRoutes/ProtectedRoute';
+import Role from './components/admin/Role';
 
 function App() {
   return (
@@ -61,7 +62,7 @@ function App() {
             <Route
               path="/configurations"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                <ProtectedRoute allowedRoles={['superadmin']}>
                   <ConfigurationPage />
                 </ProtectedRoute>
               }
@@ -69,7 +70,7 @@ function App() {
               <Route
                 path="createMachine"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                  <ProtectedRoute allowedRoles={['superadmin']}>
                     <CreateMachine />
                   </ProtectedRoute>
                 }
@@ -77,7 +78,7 @@ function App() {
               <Route
                 path="createUser"
                 element={
-                  <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                  <ProtectedRoute allowedRoles={['superadmin']}>
                     <CreateUser
                       name="username"
                       label="Username"
@@ -105,6 +106,14 @@ function App() {
 
             <Route path="*" element={<HomePage />} />
           </Route>
+          <Route
+            path="/adminAplication"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin']}>
+                <Role />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
