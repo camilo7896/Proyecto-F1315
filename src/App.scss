@@ -50,12 +50,12 @@ top: -0svh;
 .img2{
     position: absolute;
     left: 30svh;
-    bottom: -0svh;
+    bottom: -15svh;
 }
 
 
 // MediaQuery
-@media (max-width: 2123px) {
+@media (max-width: 1663px) {
   .imgBanner {
     display: none;
   }
@@ -66,3 +66,10 @@ top: -0svh;
     display: none;
   }
 }
+
+@media (min-width: 3021px) {
+  .imgBanner {
+    display: contents; /* o el display que corresponda */
+  }
+}
+
