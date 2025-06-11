@@ -46,8 +46,8 @@ const DataExport = () => {
           return {
             id: doc.id,
             fecha: d.fecha,
-            operatorCode: d.operatorCode,
             machines: d.machines,
+            operatorCode: d.operatorCode,
             reference: d.reference,
             majorStops: d.majorStops,
             totalHours: d.totalHours,
@@ -92,10 +92,11 @@ const DataExport = () => {
     const headers = [
       'ID',
       'Fecha',
-      'Operador',
       'Máquina',
+      'Operador',
       'Horómetro Inicial',
       'Horómetro Final',
+      'Paradas mayores',
       'Observaciones',
       'Horas Asignadas',
       'editadoPor'
@@ -109,6 +110,7 @@ const DataExport = () => {
         mach.machine,
         mach.horometroInicial,
         mach.horometroFinal,
+        reg.majorStops || '',
         mach.observaciones,
         reg.machines.reduce((sum, m) => sum + Number(m.horasAsignadas || 0), 0),
         reg.editadoPor ?? ''

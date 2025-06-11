@@ -256,7 +256,7 @@ const F1315 = () => {
                       value={
                         registros.find((r) => r.id === registro.id)?.machines?.[
                           index
-                        ]?.horasAsignadas ?? ''
+                        ]?.horasAsignadas ?? '0'
                       }
                       onChange={(e) => {
                         const newValue = e.target.value;
@@ -284,7 +284,8 @@ const F1315 = () => {
                     <input
                       type="number"
                       placeholder="00000000"
-                      value={m.horometroInicial}
+                      value={m.horometroInicial || '0'}
+                      required
                       onChange={(e) => {
                         const newValue = e.target.value;
                         const newRegistros = registros.map((reg) => {
@@ -308,7 +309,8 @@ const F1315 = () => {
                     <input
                       type="number"
                       placeholder="00000000"
-                      value={m.horometroFinal}
+                      value={m.horometroFinal || '0'}
+                      required
                       onChange={(e) => {
                         const newValue = e.target.value;
                         const newRegistros = registros.map((reg) => {

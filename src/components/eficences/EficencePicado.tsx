@@ -94,12 +94,12 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   const operarios = Array.from(new Set(registros.map((r) => r.operatorCode)));
 
   // Filtrado adicional
-  // Filtrado adicional
   const registrosFiltrados = registros
     .filter((reg) => reg.fecha.startsWith(mesFiltro))
     .filter((reg) =>
       filtroOperario ? reg.operatorCode === filtroOperario : true
     );
+
   // Cálculo de eficiencia total
   const sumaEficienciaTotal = registrosFiltrados.reduce((sum, reg) => {
     reg.machines.forEach((machine) => {
@@ -199,8 +199,71 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     return typeof valor === 'number' ? valor.toFixed(2) : String(valor);
   };
 
+  const handleExportCSV = () => {
+    const rows = registrosFiltrados.flatMap((reg) =>
+      reg.machines.map((machine) => {
+        const horoFin = parseFloat(machine.horometroFinal);
+        const horoIni = parseFloat(machine.horometroInicial);
+        const totalHoras =
+          isNaN(horoFin) || isNaN(horoIni) ? 0 : horoFin - horoIni;
+
+        const standardStr = machineStandards[machine.machine] ?? '0';
+        const standard = parseFloat(standardStr);
+        const horasAsignadas =
+          typeof machine.horasAsignadas === 'string'
+            ? parseFloat(machine.horasAsignadas)
+            : machine.horasAsignadas;
+
+        const eficiencia =
+          !isNaN(totalHoras) && !isNaN(standard) && !isNaN(horasAsignadas)
+            ? totalHoras - standard * horasAsignadas
+            : 0;
+
+        return {
+          Fecha: reg.fecha,
+          Código: reg.operatorCode,
+          Máquina: machine.machine,
+          HorómetroInicial: machine.horometroInicial,
+          HorómetroFinal: machine.horometroFinal,
+          Referencia: reg.reference ?? '',
+          ParadasMayores: reg.majorStops ?? '',
+          Observaciones: machine.observaciones,
+          HorasAsignadas: horasAsignadas,
+          TotalHoras: totalHoras,
+          Estandar: standard,
+          Eficiencia: eficiencia.toFixed(2)
+        };
+      })
+    );
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [
+        Object.keys(rows[0]).join(','), // encabezado
+        ...rows.map((r) => Object.values(r).join(',')) // filas
+      ].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'eficiencia_picado.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-6 w-full bg-white rounded-lg border border-gray-200 shadow-lg overflow-x-auto relative">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold text-center text-gray-800"></h2>
+        <button
+          onClick={handleExportCSV}
+          className="bg-blue-950 hover:bg-blue-900 text-white px-4 py-2 rounded shadow cursor-pointer"
+        >
+          Exportar CSV
+        </button>
+      </div>
+
       {/* Filtros por mes, operario y máquina */}
       <div className="flex flex-col md:flex-row mb-4 gap-2 items-center">
         {/* filtro mes */}
@@ -229,33 +292,17 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
             ))}
           </select>
         </div>
-        {/* filtro maquina */}
-        {/* <div>
-          <label className="mr-2 font-semibold">Filtrar por máquina:</label>
-          <select
-            value={filtroMaquina}
-            onChange={(e) => setFiltroMaquina(e.target.value)}
-            className="border p-1 rounded"
-          >
-            <option value="">Todas</option>
-            {maquinas.map((ma) => (
-              <option key={ma} value={ma}>
-                {ma}
-              </option>
-            ))}
-          </select>
-        </div> */}
       </div>
 
-      {/* Envuelve la tabla en un div con overflow-x-auto para responsividad */}
+      {/* Tabla con overflow para responsividad */}
       <div className="overflow-x-auto w-full">
         <table className="min-w-full w-full border border-gray-300 text-sm text-left">
           {/* Encabezado */}
           <thead className="backgroundForm text-white">
             <tr>
               <th className="px-3 py-2 border">Fecha</th>
-              <th className="px-3 py-2 border">Operario</th>
               <th className="px-3 py-2 border">Maquina</th>
+              <th className="px-3 py-2 border">Operario</th>
               <th className="px-3 py-2 border">Horometro inicial</th>
               <th className="px-3 py-2 border">Horometro final</th>
               <th className="px-3 py-2 border">Referencia</th>
@@ -312,19 +359,39 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                     className={`hover:bg-gray-100 ${rowClass}`}
                   >
                     <td className="px-3 py-2 border">{reg.fecha}</td>
-                    <td className="px-3 py-2 border">{reg.operatorCode}</td>
                     <td className="px-3 py-2 border">{machine.machine}</td>
+                    <td className="px-3 py-2 border">{reg.operatorCode}</td>
+                    {/* Horómetro inicial */}
                     <td className="px-3 py-2 border">
-                      {machine.horometroInicial}
+                      {machine.horometroInicial &&
+                      machine.horometroInicial.trim() !== ''
+                        ? parseFloat(machine.horometroInicial).toFixed(2)
+                        : '0.00'}
                     </td>
+                    {/* Horómetro final */}
                     <td className="px-3 py-2 border">
-                      {machine.horometroFinal}
+                      {machine.horometroFinal &&
+                      machine.horometroFinal.trim() !== ''
+                        ? parseFloat(machine.horometroFinal).toFixed(2)
+                        : '0.00'}
                     </td>
-                    <td className="px-3 py-2 border">{reg.reference || ''}</td>
-                    <td className="px-3 py-2 border">{reg.majorStops || ''}</td>
+                    {/* Referencia */}
+                    <td className="px-3 py-2 border">
+                      {reg.reference && reg.reference.trim() !== ''
+                        ? reg.reference
+                        : '0.00'}
+                    </td>
+                    {/* Paradas mayores */}
+                    <td className="px-3 py-2 border">
+                      {reg.majorStops && reg.majorStops.trim() !== ''
+                        ? reg.majorStops
+                        : '0.00'}
+                    </td>
+                    {/* Observaciones */}
                     <td className="px-3 py-2 border">
                       {machine.observaciones}
                     </td>
+                    {/* Horas asignadas */}
                     <td className="px-3 py-2 border">
                       {isEditing ? (
                         <input
@@ -336,18 +403,22 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                           min="0"
                         />
                       ) : (
-                        mostrarHoras(machine.horasAsignadas)
+                        mostrarHoras(machine.horasAsignadas || 0.0)
                       )}
                     </td>
+                    {/* Total horas */}
                     <td className="px-3 py-2 border">
                       {totalHoras.toFixed(2)}
                     </td>
+                    {/* Stand */}
                     <td className="px-3 py-2 border">
                       {machineStandards[machine.machine] ?? 'N/A'}
                     </td>
+                    {/* Eficiencia */}
                     <td className="px-3 py-2 border">
                       {eficiencia.toFixed(2)}
                     </td>
+                    {/* Acciones */}
                     {editable && (
                       <td className="px-3 py-2 border">
                         {isEditing ? (

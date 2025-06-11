@@ -1,4 +1,3 @@
-import React from 'react';
 import BackButton from '../buttons/BackButton';
 
 const Role = () => {
@@ -8,7 +7,6 @@ const Role = () => {
         <div className="p-9">
           <BackButton />
         </div>
-
         <h1>Administración de la plataforma</h1>
       </div>
     </>

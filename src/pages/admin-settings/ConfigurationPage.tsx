@@ -24,7 +24,7 @@ const ConfigurationPage = () => {
       </div>
 
       {/* Contenido dinámico */}
-      <div className="w-full max-w-4xl">
+      <div className="w-full max-w-full">
         <Outlet />
       </div>
     </div>

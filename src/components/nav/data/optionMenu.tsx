@@ -5,8 +5,8 @@ const optionMenu = [
     url: '/picado'
   },
   {
-    title: 'Supervisores',
-    subtitle: 'Supervisión y control de actividades',
+    title: 'Asignaciones',
+    subtitle: 'Asigna maquinas a operarios',
     url: '/supervisor'
   },
   {

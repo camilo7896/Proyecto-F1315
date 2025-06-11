@@ -38,7 +38,9 @@ function App() {
             <Route
               path="supervisor"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                <ProtectedRoute
+                  allowedRoles={['admin', 'operator', 'superadmin']}
+                >
                   <SupervisorPage />
                 </ProtectedRoute>
               }
