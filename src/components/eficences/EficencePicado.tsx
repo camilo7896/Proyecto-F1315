@@ -399,7 +399,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                           step="0.01"
                           value={editHoras}
                           onChange={(e) => setEditHoras(e.target.value)}
-                          className="w-full border p-1"
+                          className="w-full border p-1 "
                           min="0"
                         />
                       ) : (
