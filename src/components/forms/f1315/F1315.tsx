@@ -169,7 +169,6 @@ const F1315 = () => {
     const payload = {
       operatorCode: registro.operatorCode,
       fecha: registro.fecha,
-      paradasMayores: registro.paradasMayores,
       machines: registro.machines,
       timestamp: new Date().toISOString()
     };
@@ -376,32 +375,6 @@ const F1315 = () => {
                     />
                   </div>
                   {/* Referencia */}
-
-                  <div>
-                    <label className="block mb-1">Referencia</label>
-                    <input
-                      type="text"
-                      value={m.reference}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setRegistros((prev) =>
-                          prev.map((reg) =>
-                            reg.id === registro.id
-                              ? {
-                                  ...reg,
-                                  machines: reg.machines.map((mm, i) =>
-                                    i === index
-                                      ? { ...mm, referencia: value }
-                                      : mm
-                                  )
-                                }
-                              : reg
-                          )
-                        );
-                      }}
-                      className="w-full border border-gray-300 rounded px-2 py-1"
-                    />
-                  </div>
 
                   <div className="col-span-2">
                     <label className="block mb-1">Observaciones</label>

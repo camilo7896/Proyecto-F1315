@@ -16,6 +16,7 @@ type Machine = {
   horometroFinal: string;
   horometroInicial: string;
   machine: string;
+  paradasMayores: string;
   observaciones: string;
 };
 
@@ -182,6 +183,8 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
       horometroInicial:
         editData.horometroInicial ?? originalMachine?.horometroInicial ?? '',
       machine: editData.machine ?? originalMachine?.machine ?? '',
+      paradasMayores:
+        editData.paradasMayores ?? originalMachine?.paradasMayores ?? '',
       observaciones:
         editData.observaciones ?? originalMachine?.observaciones ?? ''
     };
@@ -444,8 +447,9 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                     </td>
                     {/* Paradas mayores */}
                     <td className="px-3 py-2 border">
-                      {reg.majorStops && reg.majorStops.trim() !== ''
-                        ? reg.majorStops
+                      {machine.paradasMayores &&
+                      machine.paradasMayores.trim() !== ''
+                        ? machine.paradasMayores
                         : '0.00'}
                     </td>
                     {/* Observaciones */}
