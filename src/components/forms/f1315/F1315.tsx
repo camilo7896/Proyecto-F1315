@@ -6,6 +6,8 @@ import '../../../App.scss';
 
 const db = getFirestore(app);
 
+console.log('Firestore DB:', db);
+
 type AssignMachineUser = {
   id: string;
   operator: string;
@@ -51,6 +53,24 @@ const F1315 = () => {
     {}
   );
   const [registros, setRegistros] = useState<RegistroCard[]>([]);
+  const [referencias, setReferencias] = useState<
+    { nombre: string; codigo: string }[]
+  >([]);
+  useEffect(() => {
+    const fetchReferencias = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'referencias'));
+        const data = snapshot.docs.map(
+          (doc) => doc.data() as { nombre: string; codigo: string }
+        );
+        setReferencias(data);
+      } catch (error) {
+        console.error('Error al cargar referencias:', error);
+      }
+    };
+
+    fetchReferencias();
+  }, []);
 
   useEffect(() => {
     const fetchAssignMachine = async () => {
@@ -375,7 +395,34 @@ const F1315 = () => {
                     />
                   </div>
                   {/* Referencia */}
+                  <select
+                    value={m.reference}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setRegistros((prev) =>
+                        prev.map((reg) =>
+                          reg.id === registro.id
+                            ? {
+                                ...reg,
+                                machines: reg.machines.map((mm, i) =>
+                                  i === index ? { ...mm, reference: value } : mm
+                                )
+                              }
+                            : reg
+                        )
+                      );
+                    }}
+                    className="w-full border border-gray-300 rounded px-2 py-1"
+                  >
+                    <option value="">Selecciona una referencia</option>
+                    {referencias.map((ref, idx) => (
+                      <option key={idx} value={ref.nombre}>
+                        {ref.nombre} ({ref.nombre})
+                      </option>
+                    ))}
+                  </select>
 
+                  {/* Observacionoes */}
                   <div className="col-span-2">
                     <label className="block mb-1">Observaciones</label>
                     <textarea

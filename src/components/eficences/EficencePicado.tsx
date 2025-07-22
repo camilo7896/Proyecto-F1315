@@ -16,6 +16,7 @@ type Machine = {
   horometroFinal: string;
   horometroInicial: string;
   machine: string;
+  reference: string;
   paradasMayores: string;
   observaciones: string;
 };
@@ -26,8 +27,6 @@ type Registro = {
   operatorCode: string;
   operatorName: string;
   machines: Machine[];
-  reference?: string;
-  majorStops?: string;
   totalHours?: string;
   editadoPor?: string;
   camposModificados?: string;
@@ -185,6 +184,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
       machine: editData.machine ?? originalMachine?.machine ?? '',
       paradasMayores:
         editData.paradasMayores ?? originalMachine?.paradasMayores ?? '',
+      reference: editData.reference ?? originalMachine?.reference ?? '',
       observaciones:
         editData.observaciones ?? originalMachine?.observaciones ?? ''
     };
@@ -256,8 +256,6 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           Máquina: machine.machine,
           HorómetroInicial: machine.horometroInicial,
           HorómetroFinal: machine.horometroFinal,
-          Referencia: reg.reference ?? '',
-          ParadasMayores: reg.majorStops ?? '',
           Observaciones: machine.observaciones,
           HorasAsignadas: horasAsignadas,
           TotalHoras: totalHoras,
@@ -369,7 +367,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
               <th className="px-3 py-2 border">Operario</th>
               <th className="px-3 py-2 border">Horometro inicial</th>
               <th className="px-3 py-2 border">Horometro final</th>
-              <th className="px-3 py-2 border">Referencia</th>
+              <th className="px-3 py-2 border">reference</th>
               <th className="px-3 py-2 border">Paradas mayores</th>
               <th className="px-3 py-2 border">Observaciones</th>
               <th className="px-3 py-2 border">Horas Asignadas</th>
@@ -439,11 +437,9 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                         ? parseFloat(machine.horometroFinal).toFixed(2)
                         : '0.00'}
                     </td>
-                    {/* Referencia */}
+                    {/* reference */}
                     <td className="px-3 py-2 border">
-                      {reg.reference && reg.reference.trim() !== ''
-                        ? reg.reference
-                        : '0.00'}
+                      {machine.reference ? machine.reference : 'N/A'}
                     </td>
                     {/* Paradas mayores */}
                     <td className="px-3 py-2 border">

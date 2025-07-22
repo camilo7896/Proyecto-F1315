@@ -14,6 +14,7 @@ import AdminData from './pages/admin-data/AdminData';
 import Picado from './components/picado/Picado';
 import ProtectedRoute from './components/protectedRoutes/ProtectedRoute';
 import Role from './components/admin/Role';
+import ReferenciaForm from './components/forms/ReferenciaForm';
 
 function App() {
   return (
@@ -88,6 +89,14 @@ function App() {
                       required={true}
                       placeholder="Enter username"
                     />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="createReferencia"
+                element={
+                  <ProtectedRoute allowedRoles={['superadmin']}>
+                    <ReferenciaForm />
                   </ProtectedRoute>
                 }
               />
