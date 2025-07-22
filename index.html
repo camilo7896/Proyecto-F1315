@@ -9,5 +9,42 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- http://localhost:5678/webhook/74ce0cf9-3cf8-4f8c-a63b-f2c462925877/chat -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css"
+      rel="stylesheet"
+    />
+    <script type="module">
+      import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+
+      createChat({
+        webhookUrl:
+          'http://localhost:5678/webhook/74ce0cf9-3cf8-4f8c-a63b-f2c462925877/chat',
+        webhookConfig: {
+          method: 'POST',
+          headers: {}
+        },
+        target: '#n8n-chat',
+        mode: 'window',
+        chatInputKey: 'chatInput',
+        chatSessionKey: 'sessionId',
+        metadata: {},
+        showWelcomeScreen: false,
+        defaultLanguage: 'en',
+        initialMessages: [
+          'Hola,! 👋',
+          'Mi nombre es Jaky. ¿En qué puedo ayudarte hoy?'
+        ],
+        i18n: {
+          en: {
+            title: 'Hola! 👋',
+            subtitle: 'Inicia un chat. Estamos aquí para ayudarte 24/7.',
+            footer: '',
+            getStarted: 'Nueva Conversación',
+            inputPlaceholder: 'Escribe tu pregunta..'
+          }
+        }
+      });
+    </script>
   </body>
 </html>

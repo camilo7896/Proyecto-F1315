@@ -42,6 +42,9 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   const [editData, setEditData] = useState<Partial<Machine>>({});
   const [editHoras, setEditHoras] = useState<string>('');
 
+  const [fechaFiltro, setFechaFiltro] = useState<string>(''); // en formato 'YYYY-MM-DD'
+  const [maquinaFiltro, setMaquinaFiltro] = useState<string>('');
+
   const [machineStandards, setMachineStandards] = useState<
     Record<string, string>
   >({});
@@ -95,10 +98,35 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
 
   // Filtrado adicional
   const registrosFiltrados = registros
-    .filter((reg) => reg.fecha.startsWith(mesFiltro))
+    .filter((reg) => {
+      // Filtro por día
+      if (fechaFiltro) {
+        return reg.fecha === fechaFiltro;
+      }
+      return true;
+    })
+    .filter((reg) => {
+      // Filtro por máquina
+      if (maquinaFiltro) {
+        return reg.machines.some((m) => m.machine === maquinaFiltro);
+      }
+      return true;
+    })
     .filter((reg) =>
       filtroOperario ? reg.operatorCode === filtroOperario : true
-    );
+    )
+    .sort((a, b) => {
+      // Ordenar por fecha descendente
+      return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+    })
+    .filter((reg) => {
+      // Filtro por mes
+      if (mesFiltro) {
+        const regMes = reg.fecha.slice(0, 7); // 'YYYY-MM'
+        return regMes === mesFiltro;
+      }
+      return true;
+    });
 
   // Cálculo de eficiencia total
   const sumaEficienciaTotal = registrosFiltrados.reduce((sum, reg) => {
@@ -262,6 +290,39 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         >
           Exportar CSV
         </button>
+      </div>
+      <hr />
+      <div className="flex flex-col md:flex-row mb-4 gap-2 items-center">
+        {/* Filtro por día */}
+        <div>
+          <label className="mr-2 font-semibold">Filtrar por día:</label>
+          <input
+            type="date"
+            value={fechaFiltro}
+            onChange={(e) => setFechaFiltro(e.target.value)}
+            className="border p-1 rounded"
+          />
+        </div>
+        {/* Filtro por máquina */}
+        <div>
+          <label className="mr-2 font-semibold">Filtrar por máquina:</label>
+          <select
+            value={maquinaFiltro}
+            onChange={(e) => setMaquinaFiltro(e.target.value)}
+            className="border p-1 rounded"
+          >
+            <option value="">Todas</option>
+            {Array.from(
+              new Set(
+                registros.flatMap((reg) => reg.machines.map((m) => m.machine))
+              )
+            ).map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Filtros por mes, operario y máquina */}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { collection, getDocs, getFirestore } from 'firebase/firestore';
 import db from '../../lib/credentialFirebase';
 import EficienciaChart from './EficienciaChart';

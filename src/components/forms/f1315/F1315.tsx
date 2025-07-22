@@ -1,3 +1,4 @@
+// F1315.tsx
 import { collection, getDocs, getFirestore, addDoc } from 'firebase/firestore';
 import app from '../../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
@@ -25,12 +26,13 @@ type MachineData = {
   horometroFinal: string;
   horasAsignadas: string | number;
   observaciones: string;
-  paradasMayores?: string; // Añadido para evitar el error
+  paradasMayores: string;
+  reference: string;
   standard?: MachineStandard;
 };
 
 type RegistroCard = {
-  id: string; // unique ID para la tarjeta
+  id: string;
   fecha: string;
   operatorCode: string;
   machines: MachineData[];
@@ -45,13 +47,11 @@ const F1315 = () => {
   const [, setMachinesAsignadas] = useState<string[]>([]);
   const [machineInputs, setMachineInputs] = useState<MachineData[]>([]);
   const [fecha, setFecha] = useState('');
-  const [paradasMayores, setParadasMayores] = useState('');
   const [standards, setStandards] = useState<Record<string, MachineStandard>>(
     {}
   );
-  const [registros, setRegistros] = useState<RegistroCard[]>([]); // Lista de registros (tarjetas)
+  const [registros, setRegistros] = useState<RegistroCard[]>([]);
 
-  // Cargar asignaciones
   useEffect(() => {
     const fetchAssignMachine = async () => {
       try {
@@ -68,7 +68,6 @@ const F1315 = () => {
     fetchAssignMachine();
   }, []);
 
-  // Cargar estándares
   const fetchStandards = async () => {
     try {
       const snapshot = await getDocs(collection(db, 'machines'));
@@ -87,7 +86,6 @@ const F1315 = () => {
     fetchStandards();
   }, []);
 
-  // Buscar operario y crear una nueva tarjeta
   const handleSearch = (value: string) => {
     setOperatorCode(value);
     const found = assignMachineUser.find((entry) => entry.operator === value);
@@ -99,7 +97,9 @@ const F1315 = () => {
           horometroInicial: '',
           horometroFinal: '',
           horasAsignadas: '',
-          observaciones: ''
+          observaciones: '',
+          paradasMayores: '',
+          reference: ''
         }))
       );
     } else {
@@ -108,7 +108,6 @@ const F1315 = () => {
     }
   };
 
-  // Añadir nuevo registro (tarjeta)
   const handleAddRegistro = () => {
     if (!fecha || !operatorCode || machineInputs.length === 0) {
       alert('Por favor completa todos los campos antes de agregar.');
@@ -119,21 +118,53 @@ const F1315 = () => {
       fecha,
       operatorCode,
       machines: [...machineInputs],
-      paradasMayores
+      paradasMayores: '' // Puedes ajustar el valor según tu lógica
     };
     setRegistros([...registros, nuevoRegistro]);
-    // Limpiar inputs
     setFecha('');
     setOperatorCode('');
     setMachinesAsignadas([]);
     setMachineInputs([]);
-    setParadasMayores('');
   };
 
-  // Enviar y eliminar registro
   const handleEnviarRegistro = async (registroId: string) => {
     const registro = registros.find((r) => r.id === registroId);
     if (!registro) return;
+
+    // Validación general
+    if (
+      !registro.operatorCode ||
+      !registro.fecha ||
+      registro.machines.length === 0
+    ) {
+      alert('Por favor completa todos los campos principales del registro.');
+      return;
+    }
+
+    // Validación específica por máquina
+    for (const machine of registro.machines) {
+      if (
+        !machine.machine ||
+        !machine.horometroInicial ||
+        !machine.horometroFinal ||
+        machine.horasAsignadas === undefined ||
+        machine.horometroInicial.toString().trim() === '' ||
+        machine.horometroFinal.toString().trim() === ''
+      ) {
+        alert(
+          'Por favor completa todos los campos requeridos de cada máquina.'
+        );
+        return;
+      }
+
+      // Validar coherencia de horómetros
+      if (Number(machine.horometroFinal) < Number(machine.horometroInicial)) {
+        alert(
+          `El horómetro final no puede ser menor que el inicial para la máquina: ${machine.machine}`
+        );
+        return;
+      }
+    }
 
     const payload = {
       operatorCode: registro.operatorCode,
@@ -154,235 +185,255 @@ const F1315 = () => {
   };
 
   return (
-    <>
-      <div className="flex p-5 w-full justify-center bg-gray-200 rounded-2xl backgroundForm flex-col items-center">
-        {/* Input de búsqueda */}
-        <div className="mb-4 w-full max-w-2xl">
-          <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
-            Buscar código de operario
-          </label>
-          <input
-            type="number"
-            value={operatorCode}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Código de operario"
-            className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-2 no-spinner"
-          />
-          <button
-            onClick={handleAddRegistro}
-            className="w-full py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition"
-          >
-            Ver mis maquinas
-          </button>
+    <div className="flex flex-col items-center p-5 w-full bg-gray-200 rounded-2xl backgroundForm">
+      <div className="mb-4 w-full max-w-2xl">
+        <label className="block text-white text-xs font-bold mb-2 uppercase tracking-wide">
+          Buscar código de operario
+        </label>
+        <input
+          type="number"
+          value={operatorCode}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Código de operario"
+          className="block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-2 no-spinner"
+        />
+        <button
+          onClick={handleAddRegistro}
+          className="w-full py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition"
+        >
+          Ver mis maquinas
+        </button>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleAddRegistro();
+        }}
+        className="w-full max-w-2xl"
+      >
+        <div className="flex flex-wrap -mx-3 mb-6">
+          <div className="w-full md:w-1/2 px-3">
+            <label className="block text-white text-xs font-bold mb-2 uppercase tracking-wide">
+              Fecha
+            </label>
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
+            />
+          </div>
         </div>
 
-        {/* Formulario principal para fecha y paradas */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleAddRegistro();
-          }}
-          className="w-full max-w-2xl"
-        >
-          {/* Fecha */}
-          <div className="flex flex-wrap -mx-3 mb-6">
-            <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
-              <label className="block uppercase tracking-wide text-white text-xs font-bold mb-2">
-                Fecha
-              </label>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                className="appearance-none block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
-              />
-            </div>
-          </div>
-
-          {/* Mostrar tarjetas de registros */}
-          {registros.map((registro) => (
-            <div
-              key={registro.id}
-              className="border border-amber-400 p-3 mb-4 bg-white rounded"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <div>
-                  <p className="font-semibold mb-1">Fecha: {registro.fecha}</p>
-                  <p className="font-semibold mb-1">
-                    Código: {registro.operatorCode}
-                  </p>
-                  <p className="text-sm mb-2 no-spinner">
-                    Paradas mayores: {registro.paradasMayores}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleEnviarRegistro(registro.id)}
-                  className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                >
-                  Enviar
-                </button>
+        {registros.map((registro) => (
+          <div
+            key={registro.id}
+            className="border border-amber-400 p-3 mb-4 bg-white rounded"
+          >
+            <div className="flex justify-between items-center mb-2">
+              <div>
+                <p className="font-semibold">Fecha: {registro.fecha}</p>
+                <p className="font-semibold">Código: {registro.operatorCode}</p>
               </div>
-              {/* Datos de máquinas */}
-              {registro.machines.map((m, index) => (
-                <div key={index} className="border p-2 mb-2 rounded bg-gray-50">
-                  <h4 className="font-semibold mb-1">{m.machine}</h4>
-                  {/* Datos del estándar */}
-                  {standards[m.machine] && (
-                    <div className="mb-2 text-sm border p-2 rounded bg-gray-100">
-                      <p>
-                        <strong>Abreviatura:</strong>{' '}
-                        {standards[m.machine].abbreviation}
-                      </p>
-                      <p>
-                        <strong>Nombre máquina:</strong>{' '}
-                        {standards[m.machine].machineName}
-                      </p>
-                      <p>
-                        <strong>Fecha estándar:</strong>{' '}
-                        {standards[m.machine].date}
-                      </p>
-                      <p>
-                        <strong>Standar:</strong>{' '}
-                        {standards[m.machine].efficiency}
-                      </p>
-                    </div>
-                  )}
-                  {/* Inputs editables */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {/* Horas asignadas */}
-                    <div>
-                      <label className="block mb-1">Horas asignadas</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={
-                          registros.find((r) => r.id === registro.id)
-                            ?.machines?.[index]?.horasAsignadas ?? '0'
-                        }
-                        onChange={(e) => {
-                          const newValue = e.target.value;
-                          const newRegistros = registros.map((reg) => {
-                            if (reg.id !== registro.id) return reg;
-                            return {
-                              ...reg,
-                              machines: reg.machines.map((m2, i) => {
-                                if (i !== index) return m2;
-                                return {
-                                  ...m2,
-                                  horasAsignadas: newValue
-                                };
-                              })
-                            };
-                          });
-                          setRegistros(newRegistros);
-                        }}
-                        className="w-full border border-gray-300 rounded px-2 py-1 no-spinner"
-                      />
-                    </div>
-                    {/* Horómetro inicial */}
-                    <div>
-                      <label className="block mb-1">Horómetro inicial</label>
-                      <input
-                        type="number"
-                        placeholder="00000000"
-                        value={m.horometroInicial || '0'}
-                        onChange={(e) => {
-                          const newValue = e.target.value;
-                          const newRegistros = registros.map((reg) => {
-                            if (reg.id !== registro.id) return reg;
-                            return {
-                              ...reg,
-                              machines: reg.machines.map((m2, i) => {
-                                if (i !== index) return m2;
-                                return { ...m2, horometroInicial: newValue };
-                              })
-                            };
-                          });
-                          setRegistros(newRegistros);
-                        }}
-                        className="w-full border border-gray-300 rounded px-2 py-1 no-spinner"
-                      />
-                    </div>
+              <button
+                onClick={() => handleEnviarRegistro(registro.id)}
+                className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+              >
+                Enviar
+              </button>
+            </div>
 
-                    {/* Horómetro final */}
-                    <div>
-                      <label className="block mb-1">Horómetro final</label>
-                      <input
-                        type="number"
-                        placeholder="00000000"
-                        value={m.horometroFinal || '0'}
-                        onChange={(e) => {
-                          const newValue = e.target.value;
-                          const newRegistros = registros.map((reg) => {
-                            if (reg.id !== registro.id) return reg;
-                            return {
-                              ...reg,
-                              machines: reg.machines.map((m2, i) => {
-                                if (i !== index) return m2;
-                                return { ...m2, horometroFinal: newValue };
-                              })
-                            };
-                          });
-                          setRegistros(newRegistros);
-                        }}
-                        className="w-full border border-gray-300 rounded px-2 py-1 no-spinner"
-                      />
-                    </div>
-                    {/* Paradas mayores */}
-                    <div className="col-span-2">
-                      <label className="block mb-1">Paradas mayores</label>
-                      <input
-                        type="number"
-                        placeholder="Numero de horas de paradas mayores"
-                        value={registro.machines[index]?.paradasMayores || ''}
-                        onChange={(e) => {
-                          const newValue = e.target.value;
-                          const newRegistros = registros.map((reg) => {
-                            if (reg.id !== registro.id) return reg;
-                            return {
-                              ...reg,
-                              machines: reg.machines.map((m2, i) => {
-                                if (i !== index) return m2;
-                                return { ...m2, paradasMayores: newValue };
-                              })
-                            };
-                          });
-                          setRegistros(newRegistros);
-                        }}
-                        className="w-full border border-gray-300 rounded px-2 py-1 no-spinner"
-                      />
-                    </div>
-                    {/* Observaciones */}
-                    <div className="col-span-2">
-                      <label className="block mb-1">Observaciones</label>
-                      <textarea
-                        placeholder="Observaciones sobre la máquina"
-                        value={m.observaciones}
-                        onChange={(e) => {
-                          const newValue = e.target.value;
-                          const newRegistros = registros.map((reg) => {
-                            if (reg.id !== registro.id) return reg;
-                            return {
-                              ...reg,
-                              machines: reg.machines.map((m2, i) => {
-                                if (i !== index) return m2;
-                                return { ...m2, observaciones: newValue };
-                              })
-                            };
-                          });
-                          setRegistros(newRegistros);
-                        }}
-                        className="w-full border border-gray-300 rounded px-2 py-1"
-                      />
-                    </div>
+            {registro.machines.map((m, index) => (
+              <div key={index} className="border p-2 mb-2 rounded bg-gray-50">
+                <h4 className="font-semibold mb-1">{m.machine}</h4>
+                {standards[m.machine] && (
+                  <div className="mb-2 text-sm border p-2 rounded bg-gray-100">
+                    <p>
+                      <strong>Abreviatura:</strong>{' '}
+                      {standards[m.machine].abbreviation}
+                    </p>
+                    <p>
+                      <strong>Nombre máquina:</strong>{' '}
+                      {standards[m.machine].machineName}
+                    </p>
+                    <p>
+                      <strong>Fecha estándar:</strong>{' '}
+                      {standards[m.machine].date}
+                    </p>
+                    <p>
+                      <strong>Estándar:</strong>{' '}
+                      {standards[m.machine].efficiency}
+                    </p>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <label className="block mb-1">Horas asignadas</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={m.horasAsignadas}
+                      required
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRegistros((prev) =>
+                          prev.map((reg) =>
+                            reg.id === registro.id
+                              ? {
+                                  ...reg,
+                                  machines: reg.machines.map((mm, i) =>
+                                    i === index
+                                      ? { ...mm, horasAsignadas: value }
+                                      : mm
+                                  )
+                                }
+                              : reg
+                          )
+                        );
+                      }}
+                      className="w-full border border-gray-300 rounded px-2 py-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Horómetro inicial</label>
+                    <input
+                      type="number"
+                      value={m.horometroInicial}
+                      required
+                      min={3}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRegistros((prev) =>
+                          prev.map((reg) =>
+                            reg.id === registro.id
+                              ? {
+                                  ...reg,
+                                  machines: reg.machines.map((mm, i) =>
+                                    i === index
+                                      ? { ...mm, horometroInicial: value }
+                                      : mm
+                                  )
+                                }
+                              : reg
+                          )
+                        );
+                      }}
+                      className="w-full border border-gray-300 rounded px-2 py-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Horómetro final</label>
+                    <input
+                      type="number"
+                      value={m.horometroFinal}
+                      required
+                      min={3}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRegistros((prev) =>
+                          prev.map((reg) =>
+                            reg.id === registro.id
+                              ? {
+                                  ...reg,
+                                  machines: reg.machines.map((mm, i) =>
+                                    i === index
+                                      ? { ...mm, horometroFinal: value }
+                                      : mm
+                                  )
+                                }
+                              : reg
+                          )
+                        );
+                      }}
+                      className="w-full border border-gray-300 rounded px-2 py-1"
+                    />
+                  </div>
+                  {/* Paradas mayores */}
+                  <div>
+                    <label className="block mb-1">Paradas mayores</label>
+                    <input
+                      type="text"
+                      value={m.paradasMayores}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRegistros((prev) =>
+                          prev.map((reg) =>
+                            reg.id === registro.id
+                              ? {
+                                  ...reg,
+                                  machines: reg.machines.map((mm, i) =>
+                                    i === index
+                                      ? { ...mm, paradasMayores: value }
+                                      : mm
+                                  )
+                                }
+                              : reg
+                          )
+                        );
+                      }}
+                      className="w-full border border-gray-300 rounded px-2 py-1"
+                    />
+                  </div>
+                  {/* Referencia */}
+
+                  <div>
+                    <label className="block mb-1">Referencia</label>
+                    <input
+                      type="text"
+                      value={m.reference}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRegistros((prev) =>
+                          prev.map((reg) =>
+                            reg.id === registro.id
+                              ? {
+                                  ...reg,
+                                  machines: reg.machines.map((mm, i) =>
+                                    i === index
+                                      ? { ...mm, referencia: value }
+                                      : mm
+                                  )
+                                }
+                              : reg
+                          )
+                        );
+                      }}
+                      className="w-full border border-gray-300 rounded px-2 py-1"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block mb-1">Observaciones</label>
+                    <textarea
+                      value={m.observaciones}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setRegistros((prev) =>
+                          prev.map((reg) =>
+                            reg.id === registro.id
+                              ? {
+                                  ...reg,
+                                  machines: reg.machines.map((mm, i) =>
+                                    i === index
+                                      ? { ...mm, observaciones: value }
+                                      : mm
+                                  )
+                                }
+                              : reg
+                          )
+                        );
+                      }}
+                      className="w-full border border-gray-300 rounded px-2 py-1"
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-          ))}
-        </form>
-      </div>
-    </>
+              </div>
+            ))}
+          </div>
+        ))}
+      </form>
+    </div>
   );
 };
 
