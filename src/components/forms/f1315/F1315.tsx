@@ -49,6 +49,55 @@ const F1315 = () => {
   const [, setMachinesAsignadas] = useState<string[]>([]);
   const [machineInputs, setMachineInputs] = useState<MachineData[]>([]);
   const [fecha, setFecha] = useState('');
+  const [ultimosHorometros, setUltimosHorometros] = useState<
+    Record<string, string>
+  >({});
+
+  useEffect(() => {
+    const fetchUltimosHorometros = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, 'registro_horometros'));
+
+        const ultimos: Record<
+          string,
+          { fecha: string; horometroFinal: string }
+        > = {};
+
+        snapshot.forEach((doc) => {
+          const data = doc.data() as RegistroCard;
+
+          data.machines.forEach((machine) => {
+            const clave = machine.machine; // ✅ Solo por máquina, no por operador
+
+            const registroActual = ultimos[clave];
+
+            if (
+              !registroActual ||
+              new Date(data.fecha) > new Date(registroActual.fecha)
+            ) {
+              ultimos[clave] = {
+                fecha: data.fecha,
+                horometroFinal: machine.horometroFinal
+              };
+            }
+          });
+        });
+
+        // Extrae solo los horómetros
+        const soloHorometros: Record<string, string> = {};
+        for (const clave in ultimos) {
+          soloHorometros[clave] = ultimos[clave].horometroFinal;
+        }
+
+        setUltimosHorometros(soloHorometros);
+      } catch (error) {
+        console.error('Error al traer últimos horómetros:', error);
+      }
+    };
+
+    fetchUltimosHorometros();
+  }, []);
+
   const [standards, setStandards] = useState<Record<string, MachineStandard>>(
     {}
   );
@@ -109,18 +158,24 @@ const F1315 = () => {
   const handleSearch = (value: string) => {
     setOperatorCode(value);
     const found = assignMachineUser.find((entry) => entry.operator === value);
+
     if (found) {
       setMachinesAsignadas(found.machines);
+
       setMachineInputs(
-        found.machines.map((machine) => ({
-          machine,
-          horometroInicial: '',
-          horometroFinal: '',
-          horasAsignadas: '',
-          observaciones: '',
-          paradasMayores: '',
-          reference: ''
-        }))
+        found.machines.map((machine) => {
+          const clave = machine; // ✅ Ya no depende del operador
+          const horometroPrevio = ultimosHorometros[clave] || '';
+          return {
+            machine,
+            horometroInicial: horometroPrevio,
+            horometroFinal: '',
+            horasAsignadas: '',
+            observaciones: '',
+            paradasMayores: '',
+            reference: ''
+          };
+        })
       );
     } else {
       setMachinesAsignadas([]);
@@ -151,7 +206,6 @@ const F1315 = () => {
     const registro = registros.find((r) => r.id === registroId);
     if (!registro) return;
 
-    // Validación general
     if (
       !registro.operatorCode ||
       !registro.fecha ||
@@ -161,7 +215,6 @@ const F1315 = () => {
       return;
     }
 
-    // Validación específica por máquina
     for (const machine of registro.machines) {
       if (
         !machine.machine ||
@@ -177,7 +230,6 @@ const F1315 = () => {
         return;
       }
 
-      // Validar coherencia de horómetros
       if (Number(machine.horometroFinal) < Number(machine.horometroInicial)) {
         alert(
           `El horómetro final no puede ser menor que el inicial para la máquina: ${machine.machine}`
@@ -188,7 +240,7 @@ const F1315 = () => {
 
     const payload = {
       operatorCode: registro.operatorCode,
-      fecha: registro.fecha,
+      fecha: obtenerFechaColombia(), // ✅ Usar fecha con hora en Colombia
       machines: registro.machines,
       timestamp: new Date().toISOString()
     };
@@ -201,6 +253,15 @@ const F1315 = () => {
       console.error('Error al guardar en Firestore:', error);
       alert('Error al guardar los datos ❌');
     }
+  };
+
+  // hora colombia
+  const obtenerFechaColombia = () => {
+    const colombiaOffset = -5 * 60; // UTC-5 en minutos
+    const now = new Date();
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const colombiaTime = new Date(utc + colombiaOffset * 60000);
+    return colombiaTime.toISOString(); // ISO string con la hora ajustada
   };
 
   return (
@@ -216,6 +277,21 @@ const F1315 = () => {
           placeholder="Código de operario"
           className="block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-2 no-spinner"
         />
+
+        {/* Seleccionar fecha */}
+        <div className="flex flex-wrap -mx-3 mb-6">
+          <div className="w-full md:w-1/2 px-3">
+            <label className="block text-white text-xs font-bold mb-2 uppercase tracking-wide">
+              Fecha de registro
+            </label>
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-2 no-spinner"
+            />
+          </div>
+        </div>
         <button
           onClick={handleAddRegistro}
           className="w-full py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition"
@@ -231,20 +307,6 @@ const F1315 = () => {
         }}
         className="w-full max-w-2xl"
       >
-        <div className="flex flex-wrap -mx-3 mb-6">
-          <div className="w-full md:w-1/2 px-3">
-            <label className="block text-white text-xs font-bold mb-2 uppercase tracking-wide">
-              Fecha
-            </label>
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4"
-            />
-          </div>
-        </div>
-
         {registros.map((registro) => (
           <div
             key={registro.id}
@@ -395,6 +457,7 @@ const F1315 = () => {
                     />
                   </div>
                   {/* Referencia */}
+                  {/* Referencia */}
                   <select
                     value={m.reference}
                     onChange={(e) => {
@@ -415,11 +478,14 @@ const F1315 = () => {
                     className="w-full border border-gray-300 rounded px-2 py-1"
                   >
                     <option value="">Selecciona una referencia</option>
-                    {referencias.map((ref, idx) => (
-                      <option key={idx} value={ref.nombre}>
-                        {ref.nombre} ({ref.nombre})
-                      </option>
-                    ))}
+                    {referencias
+                      .slice() // para no mutar el array original
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre)) // orden alfabético
+                      .map((ref, idx) => (
+                        <option key={idx} value={ref.nombre}>
+                          {ref.nombre}
+                        </option>
+                      ))}
                   </select>
 
                   {/* Observacionoes */}
