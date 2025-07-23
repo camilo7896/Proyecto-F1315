@@ -256,6 +256,8 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           Máquina: machine.machine,
           HorómetroInicial: machine.horometroInicial,
           HorómetroFinal: machine.horometroFinal,
+          Reference: machine.reference,
+          ParadasMayores: machine.paradasMayores,
           Observaciones: machine.observaciones,
           HorasAsignadas: horasAsignadas,
           TotalHoras: totalHoras,
@@ -364,16 +366,16 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
             <tr>
               <th className="px-3 py-2 border">Fecha</th>
               <th className="px-3 py-2 border">Maquina</th>
-              <th className="px-3 py-2 border">Operario</th>
+              <th className="px-3 py-2 border">Cod.Operario</th>
               <th className="px-3 py-2 border">Horometro inicial</th>
               <th className="px-3 py-2 border">Horometro final</th>
               <th className="px-3 py-2 border">reference</th>
               <th className="px-3 py-2 border">Paradas mayores</th>
               <th className="px-3 py-2 border">Observaciones</th>
               <th className="px-3 py-2 border">Horas Asignadas</th>
-              <th className="px-3 py-2 border">Total horas</th>
-              <th className="px-3 py-2 border">Stand</th>
-              <th className="px-3 py-2 border">Eficiencia</th>
+              <th className="px-3 py-2 border">Horas trabajadas</th>
+              <th className="px-3 py-2 border">Estandar</th>
+              <th className="px-3 py-2 border">Eficiencia en horas</th>
               {editable && <th className="px-3 py-2 border">Acciones</th>}
               <th className="px-3 py-2 border">📝</th>
             </tr>
