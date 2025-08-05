@@ -409,9 +409,9 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                 let rowClass = '';
                 if (eficiencia >= 0) {
                   rowClass = 'bg-green-200';
-                } else if (eficiencia >= -5 && eficiencia < 0) {
+                } else if (eficiencia >= -10 && eficiencia < 0) {
                   rowClass = 'bg-yellow-200';
-                } else if (eficiencia >= -100 && eficiencia < -5) {
+                } else if (eficiencia >= -100 && eficiencia < -10) {
                   rowClass = 'bg-red-200';
                 }
 
@@ -427,17 +427,47 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                     <td className="px-3 py-2 border">{reg.operatorCode}</td>
                     {/* Horómetro inicial */}
                     <td className="px-3 py-2 border">
-                      {machine.horometroInicial &&
-                      machine.horometroInicial.trim() !== ''
-                        ? parseFloat(machine.horometroInicial).toFixed(2)
-                        : '0.00'}
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editData.horometroInicial ?? ''}
+                          onChange={(e) =>
+                            setEditData((prev) => ({
+                              ...prev,
+                              horometroInicial: e.target.value
+                            }))
+                          }
+                          className="w-full border p-1"
+                        />
+                      ) : machine.horometroInicial &&
+                        machine.horometroInicial.trim() !== '' ? (
+                        parseFloat(machine.horometroInicial).toFixed(2)
+                      ) : (
+                        '0.00'
+                      )}
                     </td>
                     {/* Horómetro final */}
                     <td className="px-3 py-2 border">
-                      {machine.horometroFinal &&
-                      machine.horometroFinal.trim() !== ''
-                        ? parseFloat(machine.horometroFinal).toFixed(2)
-                        : '0.00'}
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editData.horometroFinal ?? ''}
+                          onChange={(e) =>
+                            setEditData((prev) => ({
+                              ...prev,
+                              horometroFinal: e.target.value
+                            }))
+                          }
+                          className="w-full border p-1"
+                        />
+                      ) : machine.horometroFinal &&
+                        machine.horometroFinal.trim() !== '' ? (
+                        parseFloat(machine.horometroFinal).toFixed(2)
+                      ) : (
+                        '0.00'
+                      )}
                     </td>
                     {/* reference */}
                     <td className="px-3 py-2 border">
@@ -445,10 +475,24 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                     </td>
                     {/* Paradas mayores */}
                     <td className="px-3 py-2 border">
-                      {machine.paradasMayores &&
-                      machine.paradasMayores.trim() !== ''
-                        ? machine.paradasMayores
-                        : '0.00'}
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editData.paradasMayores ?? ''}
+                          onChange={(e) =>
+                            setEditData((prev) => ({
+                              ...prev,
+                              paradasMayores: e.target.value
+                            }))
+                          }
+                          className="w-full border p-1"
+                        />
+                      ) : machine.paradasMayores &&
+                        machine.paradasMayores.trim() !== '' ? (
+                        machine.paradasMayores
+                      ) : (
+                        '0.00'
+                      )}
                     </td>
                     {/* Observaciones */}
                     <td className="px-3 py-2 border">
@@ -502,15 +546,30 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                       </td>
                     )}
                     {/* icono de usuario */}
-                    <td className="px-3 py-2 border relative">
+                    <td className="px-3 py-2 border text-center">
                       {reg.editadoPor && (
-                        <span
-                          className="cursor-pointer"
-                          onMouseEnter={() => {}}
-                          onMouseLeave={() => {}}
-                        >
-                          👤
-                        </span>
+                        <div className="relative group inline-block">
+                          <span className="cursor-pointer text-blue-600">
+                            👤
+                          </span>
+
+                          <div className="absolute left-1/2 top-full mt-2 transform -translate-x-1/2 z-50 hidden group-hover:block bg-white text-gray-800 text-xs p-3 rounded shadow-lg w-52 text-left">
+                            <p className="mb-1">
+                              🧑 <strong>Editado por:</strong>
+                              <br />
+                              {reg.editadoPor}
+                            </p>
+                            <p>
+                              📅 <strong>Fecha:</strong>
+                              <br />
+                              {reg.fechaUltimaEdicion
+                                ? new Date(
+                                    reg.fechaUltimaEdicion
+                                  ).toLocaleString()
+                                : 'Sin fecha'}
+                            </p>
+                          </div>
+                        </div>
                       )}
                     </td>
                   </tr>

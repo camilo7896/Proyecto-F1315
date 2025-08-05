@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+// import { Link } from 'react-router-dom';
 
 export default function HomePage() {
   return (
@@ -12,7 +12,7 @@ export default function HomePage() {
             rápidamente por las funciones principales.
           </p>
 
-          {/* Enlaces rápidos */}
+          {/* Enlaces rápidos
           <div className="flex flex-wrap">
             <Link to="/picado" className="button">
               Registrar Nuevo
@@ -23,7 +23,7 @@ export default function HomePage() {
             <Link to="/configurations" className="button">
               Configuración
             </Link>
-          </div>
+          </div> */}
 
           {/* Frase motivacional */}
           <div className="mt-6 text-center italic text-gray-700 max-w-2xl">

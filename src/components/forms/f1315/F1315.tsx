@@ -432,9 +432,11 @@ const F1315 = () => {
                   </div>
                   {/* Paradas mayores */}
                   <div>
-                    <label className="block mb-1">Paradas mayores</label>
+                    <label className="block mb-1">
+                      Paradas mayores en minutos
+                    </label>
                     <input
-                      type="text"
+                      type="number"
                       value={m.paradasMayores}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -460,6 +462,7 @@ const F1315 = () => {
                   {/* Referencia */}
                   <select
                     value={m.reference}
+                    required
                     onChange={(e) => {
                       const value = e.target.value;
                       setRegistros((prev) =>

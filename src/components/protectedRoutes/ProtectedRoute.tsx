@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useUserRole } from '../../hooks/useUserRole';
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
 
 const ProtectedRoute: React.FC<Props> = ({ allowedRoles, children }) => {
   const { role, loading } = useUserRole();
+  const navigate = useNavigate();
 
   if (loading) return <div>Cargando...</div>;
 
@@ -17,6 +19,13 @@ const ProtectedRoute: React.FC<Props> = ({ allowedRoles, children }) => {
         No tienes permiso para acceder a esta opción.
         <br />
         Solicita autorización al administrador.
+        <hr />
+        <button
+          onClick={() => navigate('/')}
+          className="mt-4 bg-blue-500 text-white py-2 px-4 rounded"
+        >
+          Volver al inicio
+        </button>
       </div>
     );
   }
@@ -29,6 +38,9 @@ const ProtectedRoute: React.FC<Props> = ({ allowedRoles, children }) => {
         <br />
         Solicita autorización al administrador.
         <hr />
+        <p className="mt-4">
+          Tu rol actual es: <strong>{role}</strong>
+        </p>
       </div>
     );
   }
