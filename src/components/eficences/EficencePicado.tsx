@@ -8,8 +8,10 @@ import {
 
 import app from '../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
+import { getAuth } from 'firebase/auth';
 
 const db = getFirestore(app);
+const auth = getAuth();
 
 type Machine = {
   horasAsignadas: string | number;
@@ -19,6 +21,7 @@ type Machine = {
   reference: string;
   paradasMayores: string;
   observaciones: string;
+  fechaHora?: string;
 };
 
 type Registro = {
@@ -32,6 +35,12 @@ type Registro = {
   camposModificados?: string;
   fechaUltimaEdicion?: string;
   originalMachines?: Machine[];
+  detallesEdicion?: {
+    usuario: string;
+    fechaHora: string;
+    valorAnterior: Partial<Machine>;
+    valorNuevo: Partial<Machine>;
+  }[];
 };
 
 const EficencePicado: React.FC<{ editable?: boolean }> = ({
@@ -41,23 +50,45 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   const [editId, setEditId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<Machine>>({});
   const [editHoras, setEditHoras] = useState<string>('');
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
-  const [fechaFiltro, setFechaFiltro] = useState<string>(''); // en formato 'YYYY-MM-DD'
+  // modal de quien edito
+  const [modalVisible, setModalVisible] = useState(false);
+  const [registroDetalleModal, setRegistroDetalleModal] =
+    useState<Registro | null>(null);
+
+  const handleMostrarDetalles = (reg: Registro) => {
+    setRegistroDetalleModal(reg);
+    setModalVisible(true);
+  };
+
+  const handleCerrarModal = () => {
+    setModalVisible(false);
+    setRegistroDetalleModal(null);
+  };
+
+  // *********************************************
+
+  const [fechaFiltro, setFechaFiltro] = useState<string>('');
   const [maquinaFiltro, setMaquinaFiltro] = useState<string>('');
-
   const [machineStandards, setMachineStandards] = useState<
     Record<string, string>
   >({});
-
   const [mesFiltro, setMesFiltro] = useState<string>(() => {
     const ahora = new Date();
     return ahora.toISOString().slice(0, 7);
   });
-
-  // Filtros adicionales
   const [filtroOperario, setFiltroOperario] = useState<string>('');
 
-  // Cargar datos y estándares
+  // Obtener email del usuario logueado
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setCurrentUserEmail(user.email);
+    }
+  }, []);
+
+  // Carga datos y estándares
   const fetchMachineStandards = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, 'machines'));
@@ -72,6 +103,17 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     } catch (error) {
       console.error('Error fetching machine standards:', error);
     }
+  };
+
+  const formatearFecha = (fechaISO: string) => {
+    if (!fechaISO) return '';
+    const fecha = new Date(fechaISO);
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const anio = fecha.getFullYear();
+    const horas = String(fecha.getHours()).padStart(2, '0');
+    const minutos = String(fecha.getMinutes()).padStart(2, '0');
+    return `${dia}/${mes}/${anio} ${horas}:${minutos}`;
   };
 
   useEffect(() => {
@@ -93,20 +135,16 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     fetchMachineStandards();
   }, []);
 
-  // Lista de operarios y máquinas únicos
   const operarios = Array.from(new Set(registros.map((r) => r.operatorCode)));
 
-  // Filtrado adicional
   const registrosFiltrados = registros
     .filter((reg) => {
-      // Filtro por día
       if (fechaFiltro) {
         return reg.fecha === fechaFiltro;
       }
       return true;
     })
     .filter((reg) => {
-      // Filtro por máquina
       if (maquinaFiltro) {
         return reg.machines.some((m) => m.machine === maquinaFiltro);
       }
@@ -116,19 +154,16 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
       filtroOperario ? reg.operatorCode === filtroOperario : true
     )
     .sort((a, b) => {
-      // Ordenar por fecha descendente
       return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
     })
     .filter((reg) => {
-      // Filtro por mes
       if (mesFiltro) {
-        const regMes = reg.fecha.slice(0, 7); // 'YYYY-MM'
+        const regMes = reg.fecha.slice(0, 7);
         return regMes === mesFiltro;
       }
       return true;
     });
 
-  // Cálculo de eficiencia total
   const sumaEficienciaTotal = registrosFiltrados.reduce((sum, reg) => {
     reg.machines.forEach((machine) => {
       const horoFin = parseFloat(machine.horometroFinal);
@@ -151,11 +186,15 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     return sum;
   }, 0);
 
-  // Funciones para editar
   const handleEdit = (reg: Registro, machineIndex: number) => {
     setEditId(reg.id + '-' + machineIndex);
     const machine = reg.machines[machineIndex];
-    setEditData(machine);
+
+    const fechaISO = reg.fecha;
+    const dateObj = new Date(fechaISO);
+    const fechaHoraLocal = dateObj.toISOString().slice(0, 16);
+
+    setEditData({ ...machine, fechaHora: fechaHoraLocal });
     setEditHoras(String(machine.horasAsignadas));
   };
 
@@ -175,6 +214,16 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
       ? reg.originalMachines[machineIndex]
       : undefined;
 
+    const valoresOriginales: Machine = originalMachine ?? {
+      horasAsignadas: '',
+      horometroFinal: '',
+      horometroInicial: '',
+      machine: '',
+      reference: '',
+      paradasMayores: '',
+      observaciones: ''
+    };
+
     newMachines[machineIndex] = {
       horasAsignadas: horasNum,
       horometroFinal:
@@ -189,36 +238,60 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         editData.observaciones ?? originalMachine?.observaciones ?? ''
     };
 
-    const camposModificados: string[] = [];
-    [
-      'horometroInicial',
-      'horometroFinal',
-      'machine',
-      'observaciones',
-      'horasAsignadas'
-    ].forEach((k) => {
-      const originalVal = originalMachine?.[k as keyof Machine];
-      const newVal = newMachines[machineIndex][k as keyof Machine];
-      if (k === 'horasAsignadas') {
-        if (parseFloat(String(originalVal)) !== horasNum) {
-          camposModificados.push(k);
-        }
-      } else {
-        if (newVal !== originalVal) {
-          camposModificados.push(k);
+    let fechaISO = reg.fecha;
+    if (editData.fechaHora) {
+      fechaISO = new Date(editData.fechaHora).toISOString();
+    }
+
+    const camposModificados: {
+      campo: string;
+      valorAnterior: unknown;
+      valorNuevo: unknown;
+    }[] = [];
+    (Object.keys(newMachines[machineIndex]) as (keyof Machine)[]).forEach(
+      (campo) => {
+        const valorAnterior = valoresOriginales[campo];
+        const valorNuevo = (newMachines[machineIndex] as Machine)[campo];
+
+        if (valorAnterior !== valorNuevo) {
+          camposModificados.push({ campo, valorAnterior, valorNuevo });
         }
       }
-    });
+    );
+    // Aquí puedes detectar cambios y agregar a camposModificados si quieres
+
+    const fechaHora = new Date().toLocaleString('es-CO');
+    const usuario = currentUserEmail ?? 'Desconocido';
 
     try {
       await updateDoc(doc(db, 'registro_horometros', regId), {
         machines: newMachines,
-        editadoPor: 'usuario', // reemplaza con usuario real
+        fecha: fechaISO,
+        editadoPor: usuario,
         camposModificados: camposModificados.join(', '),
-        fechaUltimaEdicion: new Date().toISOString()
+        fechaUltimaEdicion: new Date().toISOString(),
+        detallesEdicion: [
+          ...(reg.detallesEdicion ?? []),
+          {
+            usuario: usuario,
+            fechaHora: fechaHora,
+            valorAnterior: camposModificados.reduce((acc, c) => {
+              acc[c.campo as keyof Machine] = c.valorAnterior as
+                | string
+                | undefined;
+              return acc;
+            }, {} as Partial<Machine>),
+            valorNuevo: camposModificados.reduce((acc, c) => {
+              acc[c.campo as keyof Machine] = c.valorNuevo as
+                | string
+                | undefined;
+              return acc;
+            }, {} as Partial<Machine>)
+          }
+        ]
       });
       const newRegistros = [...registros];
-      newRegistros[index] = { ...reg, machines: newMachines };
+      newRegistros[index] = { ...reg, machines: newMachines, fecha: fechaISO };
       setRegistros(newRegistros);
       setEditId(null);
     } catch (error) {
@@ -231,6 +304,21 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   };
 
   const handleExportCSV = () => {
+    const headers = [
+      'Fecha',
+      'Código',
+      'Máquina',
+      'Horómetro inicial',
+      'Horómetro final',
+      'Reference',
+      'Paradas mayores',
+      'Observaciones',
+      'Horas Asignadas',
+      'Horas trabajadas',
+      'Estandar',
+      'Eficiencia'
+    ];
+
     const rows = registrosFiltrados.flatMap((reg) =>
       reg.machines.map((machine) => {
         const horoFin = parseFloat(machine.horometroFinal);
@@ -254,13 +342,13 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           Fecha: reg.fecha,
           Código: reg.operatorCode,
           Máquina: machine.machine,
-          HorómetroInicial: machine.horometroInicial,
-          HorómetroFinal: machine.horometroFinal,
+          'Horómetro inicial': machine.horometroInicial,
+          'Horómetro final': machine.horometroFinal,
           Reference: machine.reference,
-          ParadasMayores: machine.paradasMayores,
+          'Paradas mayores': machine.paradasMayores,
           Observaciones: machine.observaciones,
-          HorasAsignadas: horasAsignadas,
-          TotalHoras: totalHoras,
+          'Horas Asignadas': horasAsignadas,
+          'Horas trabajadas': totalHoras.toFixed(2),
           Estandar: standard,
           Eficiencia: eficiencia.toFixed(2)
         };
@@ -270,8 +358,14 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     const csvContent =
       'data:text/csv;charset=utf-8,' +
       [
-        Object.keys(rows[0]).join(','), // encabezado
-        ...rows.map((r) => Object.values(r).join(',')) // filas
+        headers.join(','),
+        ...rows.map((row) =>
+          headers
+            .map(
+              (h) => `"${String((row as Record<string, unknown>)[h] ?? '')}"`
+            )
+            .join(',')
+        )
       ].join('\n');
 
     const encodedUri = encodeURI(csvContent);
@@ -295,6 +389,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         </button>
       </div>
       <hr />
+      {/* Filtros */}
       <div className="flex flex-col md:flex-row mb-4 gap-2 items-center">
         {/* Filtro por día */}
         <div>
@@ -327,8 +422,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           </select>
         </div>
       </div>
-
-      {/* Filtros por mes, operario y máquina */}
+      {/* Filtros mes y operario */}
       <div className="flex flex-col md:flex-row mb-4 gap-2 items-center">
         {/* filtro mes */}
         <div>
@@ -357,8 +451,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           </select>
         </div>
       </div>
-
-      {/* Tabla con overflow para responsividad */}
+      {/* Tabla */}
       <div className="overflow-x-auto w-full">
         <table className="min-w-full w-full border border-gray-300 text-sm text-left">
           {/* Encabezado */}
@@ -405,7 +498,6 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                   eficiencia = totalHoras - standard * horasAsignadas;
                 }
 
-                // determinar color de fila
                 let rowClass = '';
                 if (eficiencia >= 0) {
                   rowClass = 'bg-green-200';
@@ -422,7 +514,24 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                     key={`${reg.id}-${index}`}
                     className={`hover:bg-gray-100 ${rowClass}`}
                   >
-                    <td className="px-3 py-2 border">{reg.fecha}</td>
+                    {/* Fecha y hora */}
+                    <td className="px-3 py-2 border">
+                      {isEditing ? (
+                        <input
+                          type="datetime-local"
+                          value={editData.fechaHora ?? ''}
+                          onChange={(e) =>
+                            setEditData((prev) => ({
+                              ...prev,
+                              fechaHora: e.target.value
+                            }))
+                          }
+                          className="w-full border p-1"
+                        />
+                      ) : (
+                        formatearFecha(reg.fecha)
+                      )}
+                    </td>{' '}
                     <td className="px-3 py-2 border">{machine.machine}</td>
                     <td className="px-3 py-2 border">{reg.operatorCode}</td>
                     {/* Horómetro inicial */}
@@ -513,7 +622,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                         mostrarHoras(machine.horasAsignadas || 0.0)
                       )}
                     </td>
-                    {/* Total horas */}
+                    {/* Horas trabajadas */}
                     <td className="px-3 py-2 border">
                       {totalHoras.toFixed(2)}
                     </td>
@@ -545,32 +654,17 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                         )}
                       </td>
                     )}
-                    {/* icono de usuario */}
+                    {/* Icono usuario con detalles */}
                     <td className="px-3 py-2 border text-center">
-                      {reg.editadoPor && (
-                        <div className="relative group inline-block">
-                          <span className="cursor-pointer text-blue-600">
-                            👤
-                          </span>
-
-                          <div className="absolute left-1/2 top-full mt-2 transform -translate-x-1/2 z-50 hidden group-hover:block bg-white text-gray-800 text-xs p-3 rounded shadow-lg w-52 text-left">
-                            <p className="mb-1">
-                              🧑 <strong>Editado por:</strong>
-                              <br />
-                              {reg.editadoPor}
-                            </p>
-                            <p>
-                              📅 <strong>Fecha:</strong>
-                              <br />
-                              {reg.fechaUltimaEdicion
-                                ? new Date(
-                                    reg.fechaUltimaEdicion
-                                  ).toLocaleString()
-                                : 'Sin fecha'}
-                            </p>
+                      {reg.detallesEdicion &&
+                        reg.detallesEdicion.length > 0 && (
+                          <div
+                            className="relative inline-block cursor-pointer"
+                            onClick={() => handleMostrarDetalles(reg)}
+                          >
+                            <span className="text-blue-600">👤</span>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </td>
                   </tr>
                 );
@@ -578,8 +672,55 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
             )}
           </tbody>
         </table>
-      </div>
+        {modalVisible && registroDetalleModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-4 rounded shadow-lg max-w-lg w-full max-h-full overflow-y-auto">
+              <h2 className="text-xl font-semibold mb-4">
+                Detalles de Edición
+              </h2>
+              <button
+                className="absolute top-2 right-2 text-red-600 font-bold"
+                onClick={handleCerrarModal}
+              >
+                ✖
+              </button>
+              {registroDetalleModal.detallesEdicion?.map((detalle, idx) => (
+                <div key={idx} className="mb-4 border-b border-gray-300 pb-2">
+                  <p>
+                    <strong>Usuario:</strong> {detalle.usuario}
+                  </p>
+                  <p>
+                    <strong>Fecha y hora:</strong> {detalle.fechaHora}
+                  </p>
+                  <div>
+                    <strong>Modificaciones:</strong>
+                    <ul>
+                      {Object.keys(detalle.valorAnterior).map((campo) => {
+                        const anterior = (
+                          detalle.valorAnterior as Partial<Machine>
+                        )[campo as keyof Machine];
+                        const nuevo = (detalle.valorNuevo as Partial<Machine>)[
+                          campo as keyof Machine
+                        ];
 
+                        if (anterior !== nuevo) {
+                          return (
+                            <li key={campo}>
+                              <strong>{campo}:</strong> {anterior} &rarr;{' '}
+                              {nuevo}
+                            </li>
+                          );
+                        }
+                        return null;
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
       {/* Mostrar total con color */}
       <div
         className={`mt-4 p-2 rounded shadow ${

@@ -240,7 +240,7 @@ const F1315 = () => {
 
     const payload = {
       operatorCode: registro.operatorCode,
-      fecha: obtenerFechaColombia(), // ✅ Usar fecha con hora en Colombia
+      fecha: obtenerFechaColombia(), // Aquí en lugar de new Date().toISOString()
       machines: registro.machines,
       timestamp: new Date().toISOString()
     };
@@ -257,13 +257,23 @@ const F1315 = () => {
 
   // hora colombia
   const obtenerFechaColombia = () => {
-    const colombiaOffset = -5 * 60; // UTC-5 en minutos
     const now = new Date();
-    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-    const colombiaTime = new Date(utc + colombiaOffset * 60000);
-    return colombiaTime.toISOString(); // ISO string con la hora ajustada
-  };
 
+    // Ajustar a hora local de Bogotá
+    const offset = -5; // UTC-5
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const bogotaTime = new Date(utc + offset * 3600000);
+
+    // Formatear en ISO pero sin la Z (hora local)
+    const year = bogotaTime.getFullYear();
+    const month = String(bogotaTime.getMonth() + 1).padStart(2, '0');
+    const day = String(bogotaTime.getDate()).padStart(2, '0');
+    const hours = String(bogotaTime.getHours()).padStart(2, '0');
+    const minutes = String(bogotaTime.getMinutes()).padStart(2, '0');
+    const seconds = String(bogotaTime.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  };
   return (
     <div className="flex flex-col items-center p-5 w-full bg-gray-200 rounded-2xl backgroundForm">
       <div className="mb-4 w-full max-w-2xl">
