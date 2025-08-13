@@ -457,6 +457,18 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           </select>
         </div>
       </div>
+      <div
+        className={`mt-4 p-2 rounded shadow ${
+          sumaEficienciaTotal >= 0
+            ? 'bg-green-200 text-green-800'
+            : sumaEficienciaTotal >= -5 && sumaEficienciaTotal <= -0.1
+              ? 'bg-yellow-200 text-yellow-800'
+              : 'bg-red-200 text-red-800'
+        }`}
+      >
+        <strong>Total eficiencia del mes: </strong>
+        {sumaEficienciaTotal.toFixed(2)}
+      </div>
       {/* Tabla */}
       <div className="overflow-x-auto w-full">
         <table className="min-w-full w-full border border-gray-300 text-sm text-left">
