@@ -499,11 +499,11 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                 }
 
                 let rowClass = '';
-                if (eficiencia >= 0) {
+                if (eficiencia > 0) {
                   rowClass = 'bg-green-200';
-                } else if (eficiencia >= -10 && eficiencia < 0) {
+                } else if (eficiencia <= 0 && eficiencia > -1) {
                   rowClass = 'bg-yellow-200';
-                } else if (eficiencia >= -100 && eficiencia < -10) {
+                } else if (eficiencia <= -1 && eficiencia >= -100) {
                   rowClass = 'bg-red-200';
                 }
 
