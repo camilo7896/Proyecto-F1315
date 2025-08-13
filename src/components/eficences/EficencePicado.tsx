@@ -140,10 +140,16 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   const registrosFiltrados = registros
     .filter((reg) => {
       if (fechaFiltro) {
-        return reg.fecha === fechaFiltro;
+        const fecha = new Date(reg.fecha);
+        const año = fecha.getFullYear();
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const dia = String(fecha.getDate()).padStart(2, '0');
+        const fechaRegistro = `${año}-${mes}-${dia}`;
+        return fechaRegistro === fechaFiltro;
       }
       return true;
     })
+
     .filter((reg) => {
       if (maquinaFiltro) {
         return reg.machines.some((m) => m.machine === maquinaFiltro);
