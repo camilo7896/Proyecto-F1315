@@ -264,7 +264,6 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         }
       }
     );
-    // Aquí puedes detectar cambios y agregar a camposModificados si quieres
 
     const fechaHora = new Date().toLocaleString('es-CO');
     const usuario = currentUserEmail ?? 'Desconocido';
@@ -309,75 +308,79 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     return typeof valor === 'number' ? valor.toFixed(2) : String(valor);
   };
 
-  const handleExportCSV = () => {
+  const handleExportAllCSV = () => {
     const headers = [
       'Fecha',
-      'Código',
       'Máquina',
-      'Horómetro inicial',
-      'Horómetro final',
-      'Reference',
-      'Paradas mayores',
+      'Código Operario',
+      'Horómetro Inicial',
+      'Horómetro Final',
+      'Referencia',
+      'Paradas Mayores',
       'Observaciones',
       'Horas Asignadas',
-      'Horas trabajadas',
-      'Estandar',
-      'Eficiencia'
+      'Horas Trabajadas',
+      'Estándar',
+      'Eficiencia (horas)'
     ];
 
-    const rows = registrosFiltrados.flatMap((reg) =>
+    // Usar TODOS los registros (sin filtros)
+    const rows = registros.flatMap((reg) =>
       reg.machines.map((machine) => {
-        const horoFin = parseFloat(machine.horometroFinal);
-        const horoIni = parseFloat(machine.horometroInicial);
-        const totalHoras =
-          isNaN(horoFin) || isNaN(horoIni) ? 0 : horoFin - horoIni;
+        const horoFin = parseFloat(machine.horometroFinal) || 0;
+        const horoIni = parseFloat(machine.horometroInicial) || 0;
+        const totalHoras = horoFin - horoIni;
 
-        const standardStr = machineStandards[machine.machine] ?? '0';
-        const standard = parseFloat(standardStr);
+        const standard = parseFloat(machineStandards[machine.machine] || '0');
         const horasAsignadas =
           typeof machine.horasAsignadas === 'string'
             ? parseFloat(machine.horasAsignadas)
-            : machine.horasAsignadas;
+            : Number(machine.horasAsignadas) || 0;
 
-        const eficiencia =
-          !isNaN(totalHoras) && !isNaN(standard) && !isNaN(horasAsignadas)
-            ? totalHoras - standard * horasAsignadas
-            : 0;
+        const eficiencia = totalHoras - standard * horasAsignadas;
 
         return {
-          Fecha: reg.fecha,
-          Código: reg.operatorCode,
+          Fecha: formatearFecha(reg.fecha),
           Máquina: machine.machine,
-          'Horómetro inicial': machine.horometroInicial,
-          'Horómetro final': machine.horometroFinal,
-          Reference: machine.reference,
-          'Paradas mayores': machine.paradasMayores,
-          Observaciones: machine.observaciones,
-          'Horas Asignadas': horasAsignadas,
-          'Horas trabajadas': totalHoras.toFixed(2),
-          Estandar: standard,
-          Eficiencia: eficiencia.toFixed(2)
+          'Código Operario': reg.operatorCode,
+          'Horómetro Inicial': machine.horometroInicial || '0.00',
+          'Horómetro Final': machine.horometroFinal || '0.00',
+          Referencia: machine.reference || 'N/A',
+          'Paradas Mayores': machine.paradasMayores || '0.00',
+          Observaciones: machine.observaciones || '',
+          'Horas Asignadas': mostrarHoras(machine.horasAsignadas || 0),
+          'Horas Trabajadas': totalHoras.toFixed(2),
+          Estándar: standard,
+          'Eficiencia (horas)': eficiencia.toFixed(2)
         };
       })
     );
 
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [
-        headers.join(','),
-        ...rows.map((row) =>
-          headers
-            .map(
-              (h) => `"${String((row as Record<string, unknown>)[h] ?? '')}"`
-            )
-            .join(',')
-        )
-      ].join('\n');
+    // Crear CSV
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) =>
+        headers
+          .map(
+            (header) =>
+              `"${String(row[header as keyof typeof row] || '').replace(/"/g, '""')}"`
+          )
+          .join(',')
+      )
+    ].join('\n');
 
-    const encodedUri = encodeURI(csvContent);
+    // Descargar
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'eficiencia_picado.csv');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute(
+      'download',
+      `eficiencia_picado_COMPLETO_${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    link.style.visibility = 'hidden';
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -387,12 +390,15 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     <div className="p-6 w-full bg-white rounded-lg border border-gray-200 shadow-lg overflow-x-auto relative">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold text-center text-gray-800"></h2>
-        <button
-          onClick={handleExportCSV}
-          className="bg-blue-950 hover:bg-blue-900 text-white px-4 py-2 rounded shadow cursor-pointer"
-        >
-          Exportar CSV
-        </button>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold text-center text-gray-800"></h2>
+          <button
+            onClick={handleExportAllCSV}
+            className="bg-blue-950 hover:bg-blue-900 text-white px-4 py-2 rounded shadow cursor-pointer"
+          >
+            Exportar CSV
+          </button>
+        </div>
       </div>
       <hr />
       {/* Filtros */}
@@ -469,6 +475,18 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         <strong>Total eficiencia del mes: </strong>
         {sumaEficienciaTotal.toFixed(2)}
       </div>
+
+      <p className="mb-2 text-sm text-gray-600">
+        Total de ítems:{' '}
+        {
+          registrosFiltrados.flatMap((reg) =>
+            reg.machines.filter(
+              (m) => !maquinaFiltro || m.machine === maquinaFiltro
+            )
+          ).length
+        }
+      </p>
+
       {/* Tabla */}
       <div className="overflow-x-auto w-full">
         <table className="min-w-full w-full border border-gray-300 text-sm text-left">
