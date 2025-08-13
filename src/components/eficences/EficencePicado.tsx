@@ -476,199 +476,201 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           {/* Cuerpo */}
           <tbody>
             {registrosFiltrados.flatMap((reg) =>
-              reg.machines.map((machine, index) => {
-                const horoFin = parseFloat(machine.horometroFinal);
-                const horoIni = parseFloat(machine.horometroInicial);
-                const totalHoras =
-                  isNaN(horoFin) || isNaN(horoIni) ? 0 : horoFin - horoIni;
+              reg.machines
+                .filter((m) => !maquinaFiltro || m.machine === maquinaFiltro)
+                .map((machine, index) => {
+                  const horoFin = parseFloat(machine.horometroFinal);
+                  const horoIni = parseFloat(machine.horometroInicial);
+                  const totalHoras =
+                    isNaN(horoFin) || isNaN(horoIni) ? 0 : horoFin - horoIni;
 
-                const standardStr = machineStandards[machine.machine] ?? '0';
-                const standard = parseFloat(standardStr);
-                const horasAsignadas =
-                  typeof machine.horasAsignadas === 'string'
-                    ? parseFloat(machine.horasAsignadas)
-                    : machine.horasAsignadas;
+                  const standardStr = machineStandards[machine.machine] ?? '0';
+                  const standard = parseFloat(standardStr);
+                  const horasAsignadas =
+                    typeof machine.horasAsignadas === 'string'
+                      ? parseFloat(machine.horasAsignadas)
+                      : machine.horasAsignadas;
 
-                let eficiencia = 0;
-                if (
-                  !isNaN(totalHoras) &&
-                  !isNaN(standard) &&
-                  !isNaN(horasAsignadas)
-                ) {
-                  eficiencia = totalHoras - standard * horasAsignadas;
-                }
+                  let eficiencia = 0;
+                  if (
+                    !isNaN(totalHoras) &&
+                    !isNaN(standard) &&
+                    !isNaN(horasAsignadas)
+                  ) {
+                    eficiencia = totalHoras - standard * horasAsignadas;
+                  }
 
-                let rowClass = '';
-                if (eficiencia > 0) {
-                  rowClass = 'bg-green-200';
-                } else if (eficiencia <= 0 && eficiencia > -1) {
-                  rowClass = 'bg-yellow-200';
-                } else if (eficiencia <= -1 && eficiencia >= -100) {
-                  rowClass = 'bg-red-200';
-                }
+                  let rowClass = '';
+                  if (eficiencia > 0) {
+                    rowClass = 'bg-green-200';
+                  } else if (eficiencia <= 0 && eficiencia > -1) {
+                    rowClass = 'bg-yellow-200';
+                  } else if (eficiencia <= -1 && eficiencia >= -100) {
+                    rowClass = 'bg-red-200';
+                  }
 
-                const isEditing = editId === reg.id + '-' + index;
+                  const isEditing = editId === reg.id + '-' + index;
 
-                return (
-                  <tr
-                    key={`${reg.id}-${index}`}
-                    className={`hover:bg-gray-100 ${rowClass}`}
-                  >
-                    {/* Fecha y hora */}
-                    <td className="px-3 py-2 border">
-                      {isEditing ? (
-                        <input
-                          type="datetime-local"
-                          value={editData.fechaHora ?? ''}
-                          onChange={(e) =>
-                            setEditData((prev) => ({
-                              ...prev,
-                              fechaHora: e.target.value
-                            }))
-                          }
-                          className="w-full border p-1"
-                        />
-                      ) : (
-                        formatearFecha(reg.fecha)
-                      )}
-                    </td>{' '}
-                    <td className="px-3 py-2 border">{machine.machine}</td>
-                    <td className="px-3 py-2 border">{reg.operatorCode}</td>
-                    {/* Horómetro inicial */}
-                    <td className="px-3 py-2 border">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editData.horometroInicial ?? ''}
-                          onChange={(e) =>
-                            setEditData((prev) => ({
-                              ...prev,
-                              horometroInicial: e.target.value
-                            }))
-                          }
-                          className="w-full border p-1"
-                        />
-                      ) : machine.horometroInicial &&
-                        machine.horometroInicial.trim() !== '' ? (
-                        parseFloat(machine.horometroInicial).toFixed(2)
-                      ) : (
-                        '0.00'
-                      )}
-                    </td>
-                    {/* Horómetro final */}
-                    <td className="px-3 py-2 border">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editData.horometroFinal ?? ''}
-                          onChange={(e) =>
-                            setEditData((prev) => ({
-                              ...prev,
-                              horometroFinal: e.target.value
-                            }))
-                          }
-                          className="w-full border p-1"
-                        />
-                      ) : machine.horometroFinal &&
-                        machine.horometroFinal.trim() !== '' ? (
-                        parseFloat(machine.horometroFinal).toFixed(2)
-                      ) : (
-                        '0.00'
-                      )}
-                    </td>
-                    {/* reference */}
-                    <td className="px-3 py-2 border">
-                      {machine.reference ? machine.reference : 'N/A'}
-                    </td>
-                    {/* Paradas mayores */}
-                    <td className="px-3 py-2 border">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editData.paradasMayores ?? ''}
-                          onChange={(e) =>
-                            setEditData((prev) => ({
-                              ...prev,
-                              paradasMayores: e.target.value
-                            }))
-                          }
-                          className="w-full border p-1"
-                        />
-                      ) : machine.paradasMayores &&
-                        machine.paradasMayores.trim() !== '' ? (
-                        machine.paradasMayores
-                      ) : (
-                        '0.00'
-                      )}
-                    </td>
-                    {/* Observaciones */}
-                    <td className="px-3 py-2 border">
-                      {machine.observaciones}
-                    </td>
-                    {/* Horas asignadas */}
-                    <td className="px-3 py-2 border">
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editHoras}
-                          onChange={(e) => setEditHoras(e.target.value)}
-                          className="w-full border p-1 "
-                          min="0"
-                        />
-                      ) : (
-                        mostrarHoras(machine.horasAsignadas || 0.0)
-                      )}
-                    </td>
-                    {/* Horas trabajadas */}
-                    <td className="px-3 py-2 border">
-                      {totalHoras.toFixed(2)}
-                    </td>
-                    {/* Stand */}
-                    <td className="px-3 py-2 border">
-                      {machineStandards[machine.machine] ?? 'N/A'}
-                    </td>
-                    {/* Eficiencia */}
-                    <td className="px-3 py-2 border">
-                      {eficiencia.toFixed(2)}
-                    </td>
-                    {/* Acciones */}
-                    {editable && (
+                  return (
+                    <tr
+                      key={`${reg.id}-${index}`}
+                      className={`hover:bg-gray-100 ${rowClass}`}
+                    >
+                      {/* Fecha y hora */}
                       <td className="px-3 py-2 border">
                         {isEditing ? (
-                          <button
-                            onClick={() => handleSave(reg.id, index)}
-                            className="bg-blue-500 text-white px-2 py-1 rounded cursor-pointer"
-                          >
-                            Guardar
-                          </button>
+                          <input
+                            type="datetime-local"
+                            value={editData.fechaHora ?? ''}
+                            onChange={(e) =>
+                              setEditData((prev) => ({
+                                ...prev,
+                                fechaHora: e.target.value
+                              }))
+                            }
+                            className="w-full border p-1"
+                          />
                         ) : (
-                          <button
-                            onClick={() => handleEdit(reg, index)}
-                            className="bg-gray-500 text-white px-2 py-1 rounded cursor-pointer"
-                          >
-                            Editar
-                          </button>
+                          formatearFecha(reg.fecha)
+                        )}
+                      </td>{' '}
+                      <td className="px-3 py-2 border">{machine.machine}</td>
+                      <td className="px-3 py-2 border">{reg.operatorCode}</td>
+                      {/* Horómetro inicial */}
+                      <td className="px-3 py-2 border">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editData.horometroInicial ?? ''}
+                            onChange={(e) =>
+                              setEditData((prev) => ({
+                                ...prev,
+                                horometroInicial: e.target.value
+                              }))
+                            }
+                            className="w-full border p-1"
+                          />
+                        ) : machine.horometroInicial &&
+                          machine.horometroInicial.trim() !== '' ? (
+                          parseFloat(machine.horometroInicial).toFixed(2)
+                        ) : (
+                          '0.00'
                         )}
                       </td>
-                    )}
-                    {/* Icono usuario con detalles */}
-                    <td className="px-3 py-2 border text-center">
-                      {reg.detallesEdicion &&
-                        reg.detallesEdicion.length > 0 && (
-                          <div
-                            className="relative inline-block cursor-pointer"
-                            onClick={() => handleMostrarDetalles(reg)}
-                          >
-                            <span className="text-blue-600">👤</span>
-                          </div>
+                      {/* Horómetro final */}
+                      <td className="px-3 py-2 border">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editData.horometroFinal ?? ''}
+                            onChange={(e) =>
+                              setEditData((prev) => ({
+                                ...prev,
+                                horometroFinal: e.target.value
+                              }))
+                            }
+                            className="w-full border p-1"
+                          />
+                        ) : machine.horometroFinal &&
+                          machine.horometroFinal.trim() !== '' ? (
+                          parseFloat(machine.horometroFinal).toFixed(2)
+                        ) : (
+                          '0.00'
                         )}
-                    </td>
-                  </tr>
-                );
-              })
+                      </td>
+                      {/* reference */}
+                      <td className="px-3 py-2 border">
+                        {machine.reference ? machine.reference : 'N/A'}
+                      </td>
+                      {/* Paradas mayores */}
+                      <td className="px-3 py-2 border">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editData.paradasMayores ?? ''}
+                            onChange={(e) =>
+                              setEditData((prev) => ({
+                                ...prev,
+                                paradasMayores: e.target.value
+                              }))
+                            }
+                            className="w-full border p-1"
+                          />
+                        ) : machine.paradasMayores &&
+                          machine.paradasMayores.trim() !== '' ? (
+                          machine.paradasMayores
+                        ) : (
+                          '0.00'
+                        )}
+                      </td>
+                      {/* Observaciones */}
+                      <td className="px-3 py-2 border">
+                        {machine.observaciones}
+                      </td>
+                      {/* Horas asignadas */}
+                      <td className="px-3 py-2 border">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editHoras}
+                            onChange={(e) => setEditHoras(e.target.value)}
+                            className="w-full border p-1 "
+                            min="0"
+                          />
+                        ) : (
+                          mostrarHoras(machine.horasAsignadas || 0.0)
+                        )}
+                      </td>
+                      {/* Horas trabajadas */}
+                      <td className="px-3 py-2 border">
+                        {totalHoras.toFixed(2)}
+                      </td>
+                      {/* Stand */}
+                      <td className="px-3 py-2 border">
+                        {machineStandards[machine.machine] ?? 'N/A'}
+                      </td>
+                      {/* Eficiencia */}
+                      <td className="px-3 py-2 border">
+                        {eficiencia.toFixed(2)}
+                      </td>
+                      {/* Acciones */}
+                      {editable && (
+                        <td className="px-3 py-2 border">
+                          {isEditing ? (
+                            <button
+                              onClick={() => handleSave(reg.id, index)}
+                              className="bg-blue-500 text-white px-2 py-1 rounded cursor-pointer"
+                            >
+                              Guardar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleEdit(reg, index)}
+                              className="bg-gray-500 text-white px-2 py-1 rounded cursor-pointer"
+                            >
+                              Editar
+                            </button>
+                          )}
+                        </td>
+                      )}
+                      {/* Icono usuario con detalles */}
+                      <td className="px-3 py-2 border text-center">
+                        {reg.detallesEdicion &&
+                          reg.detallesEdicion.length > 0 && (
+                            <div
+                              className="relative inline-block cursor-pointer"
+                              onClick={() => handleMostrarDetalles(reg)}
+                            >
+                              <span className="text-blue-600">👤</span>
+                            </div>
+                          )}
+                      </td>
+                    </tr>
+                  );
+                })
             )}
           </tbody>
         </table>
