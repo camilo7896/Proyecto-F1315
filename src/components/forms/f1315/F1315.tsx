@@ -206,41 +206,65 @@ const F1315 = () => {
     const registro = registros.find((r) => r.id === registroId);
     if (!registro) return;
 
+    // Validar campos principales
     if (
-      !registro.operatorCode ||
-      !registro.fecha ||
-      registro.machines.length === 0
+      !registro.operatorCode?.toString().trim() ||
+      !registro.fecha?.toString().trim()
     ) {
-      alert('Por favor completa todos los campos principales del registro.');
+      alert('Por favor completa el código de operador y la fecha.');
       return;
     }
 
+    if (registro.machines.length === 0) {
+      alert('Debe haber al menos una máquina en el registro.');
+      return;
+    }
+
+    // Validar cada máquina
     for (const machine of registro.machines) {
+      if (!machine.machine?.toString().trim()) {
+        alert('Falta el nombre de la máquina.');
+        return;
+      }
+
+      // Validar campos numéricos
       if (
-        !machine.machine ||
-        !machine.horometroInicial ||
-        !machine.horometroFinal ||
-        machine.horasAsignadas === undefined ||
-        machine.horometroInicial.toString().trim() === '' ||
-        machine.horometroFinal.toString().trim() === ''
+        machine.horometroInicial === '' ||
+        isNaN(Number(machine.horometroInicial)) ||
+        machine.horometroFinal === '' ||
+        isNaN(Number(machine.horometroFinal)) ||
+        machine.horasAsignadas === '' ||
+        isNaN(Number(machine.horasAsignadas)) ||
+        machine.paradasMayores === '' ||
+        isNaN(Number(machine.paradasMayores))
       ) {
         alert(
-          'Por favor completa todos los campos requeridos de cada máquina.'
+          `Todos los campos numéricos son obligatorios para la máquina: ${machine.machine}`
         );
         return;
       }
 
+      // Validar que el horómetro final no sea menor que el inicial
       if (Number(machine.horometroFinal) < Number(machine.horometroInicial)) {
         alert(
-          `El horómetro final no puede ser menor que el inicial para la máquina: ${machine.machine}`
+          `El horómetro final no puede ser menor que el inicial en la máquina: ${machine.machine}`
+        );
+        return;
+      }
+
+      // Validar referencia
+      if (!machine.reference?.toString().trim()) {
+        alert(
+          `Debe seleccionar una referencia para la máquina: ${machine.machine}`
         );
         return;
       }
     }
 
+    // Construir payload
     const payload = {
       operatorCode: registro.operatorCode,
-      fecha: obtenerFechaColombia(), // Aquí en lugar de new Date().toISOString()
+      fecha: obtenerFechaColombia(),
       machines: registro.machines,
       timestamp: new Date().toISOString()
     };
@@ -364,8 +388,8 @@ const F1315 = () => {
                     <input
                       type="number"
                       min={0}
-                      value={m.horasAsignadas}
                       required
+                      value={m.horasAsignadas}
                       onChange={(e) => {
                         const value = e.target.value;
                         setRegistros((prev) =>
@@ -390,9 +414,9 @@ const F1315 = () => {
                     <label className="block mb-1">Horómetro inicial</label>
                     <input
                       type="number"
-                      value={m.horometroInicial}
                       required
                       min={3}
+                      value={m.horometroInicial}
                       onChange={(e) => {
                         const value = e.target.value;
                         setRegistros((prev) =>
@@ -417,9 +441,9 @@ const F1315 = () => {
                     <label className="block mb-1">Horómetro final</label>
                     <input
                       type="number"
-                      value={m.horometroFinal}
                       required
                       min={3}
+                      value={m.horometroFinal}
                       onChange={(e) => {
                         const value = e.target.value;
                         setRegistros((prev) =>
@@ -440,13 +464,13 @@ const F1315 = () => {
                       className="w-full border border-gray-300 rounded px-2 py-1"
                     />
                   </div>
-                  {/* Paradas mayores */}
                   <div>
                     <label className="block mb-1">
                       Paradas mayores en minutos
                     </label>
                     <input
                       type="number"
+                      required
                       value={m.paradasMayores}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -468,8 +492,6 @@ const F1315 = () => {
                       className="w-full border border-gray-300 rounded px-2 py-1"
                     />
                   </div>
-                  {/* Referencia */}
-                  {/* Referencia */}
                   <select
                     value={m.reference}
                     required
@@ -492,8 +514,8 @@ const F1315 = () => {
                   >
                     <option value="">Selecciona una referencia</option>
                     {referencias
-                      .slice() // para no mutar el array original
-                      .sort((a, b) => a.nombre.localeCompare(b.nombre)) // orden alfabético
+                      .slice()
+                      .sort((a, b) => a.nombre.localeCompare(b.nombre))
                       .map((ref, idx) => (
                         <option key={idx} value={ref.nombre}>
                           {ref.nombre}
@@ -501,7 +523,6 @@ const F1315 = () => {
                       ))}
                   </select>
 
-                  {/* Observacionoes */}
                   <div className="col-span-2">
                     <label className="block mb-1">Observaciones</label>
                     <textarea
