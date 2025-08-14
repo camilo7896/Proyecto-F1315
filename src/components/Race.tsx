@@ -145,7 +145,7 @@ const RaceOperator: React.FC<CarreraOperariosProps> = ({
                 {op.code}
               </div>
 
-              <span className="text-xs text-gray-500">#{index + 1}</span>
+              <strong className="text-lg text-gray-500">{index + 1}</strong>
             </div>
           );
         })}
