@@ -9,7 +9,7 @@ import {
 import app from '../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
 import { getAuth } from 'firebase/auth';
-import RaceOperator from '../race';
+import RaceOperator from '../Race';
 
 const db = getFirestore(app);
 const auth = getAuth();
