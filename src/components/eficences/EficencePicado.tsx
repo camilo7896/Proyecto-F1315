@@ -52,6 +52,8 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   const [editHoras, setEditHoras] = useState<string>('');
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
+  const [sumaEstandarHoras] = useState<number>(0);
+
   // modal de quien edito
   const [modalVisible, setModalVisible] = useState(false);
   const [registroDetalleModal, setRegistroDetalleModal] =
@@ -321,6 +323,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
       'Horas Asignadas',
       'Horas Trabajadas',
       'Estándar',
+      'Estandar en horas',
       'Eficiencia (horas)'
     ];
 
@@ -385,6 +388,60 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     link.click();
     document.body.removeChild(link);
   };
+
+  // Calcular sumas totales
+  const sumaHorasAsignadas = registrosFiltrados.reduce((sum, reg) => {
+    reg.machines.forEach((machine) => {
+      const horas =
+        typeof machine.horasAsignadas === 'string'
+          ? parseFloat(machine.horasAsignadas)
+          : machine.horasAsignadas;
+      sum += isNaN(horas) ? 0 : horas;
+    });
+    return sum;
+  }, 0);
+
+  const sumaHorasTrabajadas = registrosFiltrados.reduce((sum, reg) => {
+    reg.machines.forEach((machine) => {
+      const horoFin = parseFloat(machine.horometroFinal) || 0;
+      const horoIni = parseFloat(machine.horometroInicial) || 0;
+      sum += horoFin - horoIni;
+    });
+    return sum;
+  }, 0);
+
+  // ********************************eficiencia en horas
+  const sumaStandarEsperado = registrosFiltrados.reduce((sum, reg) => {
+    reg.machines.forEach((machine) => {
+      const horasAsignadas =
+        typeof machine.horasAsignadas === 'string'
+          ? parseFloat(machine.horasAsignadas)
+          : machine.horasAsignadas;
+      const standard = parseFloat(machineStandards[machine.machine] || '0');
+      sum += horasAsignadas * standard;
+    });
+    return sum;
+  }, 0);
+  const eficienciaHoras = sumaHorasTrabajadas - sumaStandarEsperado;
+
+  // Suma de todos los estándares (nueva variable)
+  const sumaEstandarHoras1 = registrosFiltrados.reduce((sum, reg) => {
+    reg.machines.forEach((machine) => {
+      const standard = parseFloat(machineStandards[machine.machine] || '0');
+      const horasAsignadas =
+        typeof machine.horasAsignadas === 'string'
+          ? parseFloat(machine.horasAsignadas)
+          : machine.horasAsignadas || 0;
+
+      // Solo suma si standard > 0
+      if (standard > 0) {
+        sum += standard * horasAsignadas;
+      }
+    });
+    return sum;
+  }, 0);
+  console.log('h. estándar ' + sumaEstandarHoras);
+  console.log('h. trabajadas ' + sumaHorasTrabajadas);
 
   return (
     <div className="p-6 w-full bg-white rounded-lg border border-gray-200 shadow-lg overflow-x-auto relative">
@@ -463,17 +520,48 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           </select>
         </div>
       </div>
-      <div
-        className={`mt-4 p-2 rounded shadow ${
-          sumaEficienciaTotal >= 0
-            ? 'bg-green-200 text-green-800'
-            : sumaEficienciaTotal >= -5 && sumaEficienciaTotal <= -0.1
-              ? 'bg-yellow-200 text-yellow-800'
-              : 'bg-red-200 text-red-800'
-        }`}
-      >
-        <strong>Total eficiencia del mes: </strong>
-        {sumaEficienciaTotal.toFixed(2)}
+
+      {/* ********************************eficiencia en horas******************************** */}
+
+      {/* ********************************eficiencia en horas******************************** */}
+
+      <div className="grid grid-cols-4 gap-4 my-4">
+        {/* Horas Asignadas */}
+        <div className="bg-blue-100 p-3 rounded shadow">
+          <p className="font-bold">Total Horas Asignadas</p>
+          <p>{sumaHorasAsignadas.toFixed(2)} horas</p>
+        </div>
+
+        {/* Horas Trabajadas */}
+        <div className="bg-green-100 p-3 rounded shadow">
+          <p className="font-bold">Total Horas Trabajadas</p>
+          <p>{sumaHorasTrabajadas.toFixed(2)} horas</p>
+        </div>
+
+        {/* Estandar en Horas */}
+        <div className="bg-purple-100 p-3 rounded shadow">
+          <p className="font-bold">Total Estandar en Horas</p>
+          <p>{sumaEstandarHoras1.toFixed(2)} horas</p>
+        </div>
+
+        {/* Eficiencia */}
+        <div
+          className={`p-3 rounded shadow ${
+            eficienciaHoras >= 0 ? 'bg-green-200' : 'bg-red-200'
+          }`}
+        >
+          <p className="font-bold">Eficiencia Total</p>
+
+          <strong className="text-sm">
+            Porcentaje:{' '}
+            {sumaEstandarHoras1 > 0 && !isNaN(sumaHorasTrabajadas)
+              ? ((sumaHorasTrabajadas / sumaEstandarHoras1 - 1) * 100).toFixed(
+                  2
+                )
+              : '0.00'}
+            %
+          </strong>
+        </div>
       </div>
 
       <p className="mb-2 text-sm text-gray-600">
@@ -503,6 +591,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
               <th className="px-3 py-2 border">Observaciones</th>
               <th className="px-3 py-2 border">Horas Asignadas</th>
               <th className="px-3 py-2 border">Horas trabajadas</th>
+              <th className="px-3 py-2 border">Estandar en horas</th>
               <th className="px-3 py-2 border">Estandar</th>
               <th className="px-3 py-2 border">Eficiencia en horas</th>
               {editable && <th className="px-3 py-2 border">Acciones</th>}
@@ -664,6 +753,20 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                       <td className="px-3 py-2 border">
                         {totalHoras.toFixed(2)}
                       </td>
+                      {/* Standar x Horas */}
+                      <td className="px-3 py-2 border">
+                        {machineStandards[machine.machine] &&
+                        parseFloat(machineStandards[machine.machine]) > 0
+                          ? (
+                              parseFloat(
+                                machineStandards[machine.machine] || '0'
+                              ) *
+                              (typeof machine.horasAsignadas === 'string'
+                                ? parseFloat(machine.horasAsignadas)
+                                : machine.horasAsignadas || 0)
+                            ).toFixed(2)
+                          : 'N/A'}
+                      </td>
                       {/* Stand */}
                       <td className="px-3 py-2 border">
                         {machineStandards[machine.machine] ?? 'N/A'}
@@ -770,7 +873,10 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         }`}
       >
         <strong>Total eficiencia del mes: </strong>
-        {sumaEficienciaTotal.toFixed(2)}
+        {sumaEficienciaTotal.toFixed(2)} horas
+        <br />
+        <strong>Total estándar en horas: </strong>
+        {sumaEstandarHoras.toFixed(2)} horas
       </div>
     </div>
   );
