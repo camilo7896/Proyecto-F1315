@@ -140,7 +140,6 @@ const RaceOperator: React.FC<CarreraOperariosProps> = ({
                 style={{
                   transform: index === 0 ? 'scale(1.1)' : 'scale(1)'
                 }}
-                title={`${op.name} - Eficiencia: ${op.eficienciaPromedio.toFixed(2)}`}
               >
                 {op.code}
               </div>
