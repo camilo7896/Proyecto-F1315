@@ -144,9 +144,7 @@ const RaceOperator: React.FC<CarreraOperariosProps> = ({
               >
                 {op.code}
               </div>
-              <span className="text-xs mt-1 font-medium">
-                {op.eficienciaPromedio.toFixed(1)}
-              </span>
+
               <span className="text-xs text-gray-500">#{index + 1}</span>
             </div>
           );
