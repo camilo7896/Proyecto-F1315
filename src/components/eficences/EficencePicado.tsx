@@ -872,11 +872,13 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
               : 'bg-red-200 text-red-800'
         }`}
       >
-        <strong>Total eficiencia del mes: </strong>
-        {sumaEficienciaTotal.toFixed(2)} horas
-        <br />
-        <strong>Total estándar en horas: </strong>
-        {sumaEstandarHoras.toFixed(2)} horas
+        <strong className="text-sm">
+          Porcentaje:{' '}
+          {sumaEstandarHoras1 > 0 && !isNaN(sumaHorasTrabajadas)
+            ? ((sumaHorasTrabajadas / sumaEstandarHoras1 - 1) * 100).toFixed(2)
+            : '0.00'}
+          %
+        </strong>
       </div>
     </div>
   );
