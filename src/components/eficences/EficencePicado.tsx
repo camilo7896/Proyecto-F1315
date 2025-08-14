@@ -9,6 +9,7 @@ import {
 import app from '../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
 import { getAuth } from 'firebase/auth';
+import RaceOperator from '../race';
 
 const db = getFirestore(app);
 const auth = getAuth();
@@ -520,11 +521,8 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           </select>
         </div>
       </div>
-
       {/* ********************************eficiencia en horas******************************** */}
-
       {/* ********************************eficiencia en horas******************************** */}
-
       <div className="grid grid-cols-4 gap-4 my-4">
         {/* Horas Asignadas */}
         <div className="bg-blue-100 p-3 rounded shadow">
@@ -563,7 +561,6 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           </strong>
         </div>
       </div>
-
       <p className="mb-2 text-sm text-gray-600">
         Total de ítems:{' '}
         {
@@ -574,7 +571,10 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           ).length
         }
       </p>
-
+      <RaceOperator
+        registrosFiltrados={registrosFiltrados}
+        machineStandards={machineStandards}
+      />{' '}
       {/* Tabla */}
       <div className="overflow-x-auto w-full">
         <table className="min-w-full w-full border border-gray-300 text-sm text-left">
