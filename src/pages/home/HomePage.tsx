@@ -29,6 +29,7 @@ export default function HomePage() {
           <div className="mt-6 text-center italic text-gray-700 max-w-2xl">
             "El éxito es la suma de pequeños esfuerzos repetidos día tras día."
           </div>
+          <div></div>
         </div>
       </div>
     </>
