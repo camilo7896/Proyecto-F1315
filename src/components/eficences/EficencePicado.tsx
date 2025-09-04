@@ -4,7 +4,8 @@ import {
   getFirestore,
   doc,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  type DocumentData
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -479,8 +480,10 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         updateData.fecha = fechaISO;
       }
 
-      await updateDoc(doc(db, 'registro_horometros', regId), updateData);
-
+      await updateDoc(
+        doc(db, 'registro_horometros', regId),
+        updateData as DocumentData
+      );
       const newRegistros = [...registros];
       newRegistros[index] = {
         ...reg,
@@ -545,6 +548,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           'Horas Trabajadas': totalHoras.toFixed(2),
           Estándar: standard,
           'Eficiencia (horas)': eficiencia.toFixed(2),
+
           Estado: reg.estado || 'Pendiente'
         };
       })
