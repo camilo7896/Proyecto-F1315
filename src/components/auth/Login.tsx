@@ -155,7 +155,7 @@ const Login: React.FC = () => {
       </div>
       {/* Version */}
       <div className="absolute bottom-5 text-gray-400 text-sm">
-        Versión 1.0.2
+        Versión 1.0.3
       </div>
     </div>
   );
