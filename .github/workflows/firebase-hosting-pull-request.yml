@@ -18,6 +18,7 @@ jobs:
       # 1. Instalar Node.js
       - uses: actions/setup-node@v4
         with:
+<<<<<<< HEAD
           node-version: 20   # o 18, depende de lo que uses en tu proyecto
 
       # 2. Instalar dependencias
@@ -27,6 +28,17 @@ jobs:
       - run: npm run build
 
       # 4. Deploy preview en Firebase Hosting
+=======
+          node-version: 20 # puedes usar 18 o 20, depende de tu proyecto
+
+      # 2. Instalar dependencias
+      - run: npm ci # o "npm install" si no tienes package-lock.json
+
+      # 3. Compilar tu proyecto con Vite
+      - run: npm run build
+
+      # 4. Hacer deploy del preview en Firebase Hosting
+>>>>>>> b54d5bf (Modificacion en archivos github)
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

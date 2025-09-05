@@ -521,51 +521,80 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     ];
 
     // Usar TODOS los registros (sin filtros)
-    const rows = registros.flatMap((reg) =>
-      reg.machines.map((machine) => {
-        const horoFin = parseFloat(machine.horometroFinal) || 0;
-        const horoIni = parseFloat(machine.horometroInicial) || 0;
-        const totalHoras = horoFin - horoIni;
+    const rows = registrosFiltrados.flatMap((reg) =>
+      reg.machines
+        .filter((m) => !maquinaFiltro || m.machine === maquinaFiltro)
+        .map((machine) => {
+          const horoFin = parseFloat(machine.horometroFinal) || 0;
+          const horoIni = parseFloat(machine.horometroInicial) || 0;
+          const totalHoras = horoFin - horoIni;
 
-        const standard = parseFloat(machineStandards[machine.machine] || '0');
-        const horasAsignadas =
-          typeof machine.horasAsignadas === 'string'
-            ? parseFloat(machine.horasAsignadas)
-            : Number(machine.horasAsignadas) || 0;
+          const standard = parseFloat(machineStandards[machine.machine] || '0');
+          const horasAsignadas =
+            typeof machine.horasAsignadas === 'string'
+              ? parseFloat(machine.horasAsignadas)
+              : Number(machine.horasAsignadas) || 0;
 
-        const eficiencia = totalHoras - standard * horasAsignadas;
+          const eficiencia = totalHoras - standard * horasAsignadas;
 
-        return {
-          Fecha: formatearFecha(reg.fecha),
-          Máquina: machine.machine,
-          'Código Operario': reg.operatorCode,
-          'Horómetro Inicial': machine.horometroInicial || '0.00',
-          'Horómetro Final': machine.horometroFinal || '0.00',
-          Referencia: machine.reference || 'N/A',
-          'Paradas Mayores': machine.paradasMayores || '0.00',
-          Observaciones: machine.observaciones || '',
-          'Horas Asignadas': mostrarHoras(machine.horasAsignadas || 0),
-          'Horas Trabajadas': totalHoras.toFixed(2),
-          Estándar: standard,
-          'Eficiencia (horas)': eficiencia.toFixed(2),
-
-          Estado: reg.estado || 'Pendiente'
-        };
-      })
+          return {
+            Fecha: formatearFecha(reg.fecha),
+            Máquina: machine.machine,
+            'Código Operario': reg.operatorCode,
+            'Horómetro Inicial': machine.horometroInicial || '0.00',
+            'Horómetro Final': machine.horometroFinal || '0.00',
+            Referencia: machine.reference || 'N/A',
+            'Paradas Mayores': machine.paradasMayores || '0.00',
+            Observaciones: machine.observaciones || '',
+            'Horas Asignadas': mostrarHoras(machine.horasAsignadas || 0),
+            'Horas Trabajadas': totalHoras.toFixed(2),
+            Estándar: standard,
+            'Estandar en horas': (standard * horasAsignadas).toFixed(2),
+            'Eficiencia (horas)': eficiencia.toFixed(2),
+            Estado: reg.estado || 'Pendiente'
+          };
+        })
     );
 
-    // Crear CSV
+    // Crear CSV sin comillas para valores numéricos
     const csvContent = [
-      headers.join(','),
+      headers.join(','), // Encabezados sin comillas
       ...rows.map((row) =>
         headers
-          .map(
-            (header) =>
-              `"${String(row[header as keyof typeof row] || '').replace(/"/g, '""')}"`
-          )
+          .map((header) => {
+            const value = row[header as keyof typeof row];
+
+            // Determinar si el valor es numérico
+            const isNumeric = [
+              'Horómetro Inicial',
+              'Horómetro Final',
+              'Paradas Mayores',
+              'Horas Asignadas',
+              'Horas Trabajadas',
+              'Estándar',
+              'Estandar en horas',
+              'Eficiencia (horas)'
+            ].includes(header);
+
+            // Para valores numéricos, no usar comillas
+            if (isNumeric) {
+              return String(value);
+            }
+
+            // Para valores de texto, usar comillas y escapar las existentes
+            return `"${String(value || '').replace(/"/g, '""')}"`;
+          })
           .join(',')
       )
     ].join('\n');
+
+    // Crear nombre de archivo con información de filtros
+    let fileName = 'eficiencia_picado';
+    if (fechaFiltro) fileName += `_fecha-${fechaFiltro}`;
+    if (maquinaFiltro) fileName += `_maquina-${maquinaFiltro}`;
+    if (mesFiltro) fileName += `_mes-${mesFiltro}`;
+    if (filtroOperario) fileName += `_operario-${filtroOperario}`;
+    fileName += `_${new Date().toISOString().slice(0, 10)}.csv`;
 
     // Descargar
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -573,10 +602,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     const url = URL.createObjectURL(blob);
 
     link.setAttribute('href', url);
-    link.setAttribute(
-      'download',
-      `eficiencia_picado_COMPLETO_${new Date().toISOString().slice(0, 10)}.csv`
-    );
+    link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
 
     document.body.appendChild(link);

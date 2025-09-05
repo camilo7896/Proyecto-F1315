@@ -1,12 +1,18 @@
 // F1315.tsx
-import { collection, getDocs, getFirestore, addDoc } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  getFirestore,
+  addDoc,
+  onSnapshot,
+  query,
+  where
+} from 'firebase/firestore';
 import app from '../../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
 import '../../../App.scss';
 
 const db = getFirestore(app);
-
-console.log('Firestore DB:', db);
 
 type AssignMachineUser = {
   id: string;
@@ -52,6 +58,53 @@ const F1315 = () => {
   const [ultimosHorometros, setUltimosHorometros] = useState<
     Record<string, string>
   >({});
+  const [operariosRegistradosHoy, setOperariosRegistradosHoy] = useState<
+    string[]
+  >([]);
+  const [showStatusPanel, setShowStatusPanel] = useState(false);
+
+  // Obtener la fecha actual en formato YYYY-MM-DD (Colombia)
+  const obtenerFechaActualColombia = () => {
+    const now = new Date();
+    const offset = -5; // UTC-5 para Colombia
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const bogotaTime = new Date(utc + offset * 3600000);
+
+    const year = bogotaTime.getFullYear();
+    const month = String(bogotaTime.getMonth() + 1).padStart(2, '0');
+    const day = String(bogotaTime.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  };
+
+  // Escuchar en tiempo real los registros de hoy
+  useEffect(() => {
+    const fechaHoy = obtenerFechaActualColombia();
+
+    // Consulta para obtener registros del día actual
+    const q = query(
+      collection(db, 'registro_horometros'),
+      where('fecha', '>=', `${fechaHoy}T00:00:00`),
+      where('fecha', '<=', `${fechaHoy}T23:59:59`)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const operarios: string[] = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() as RegistroCard;
+
+        // Agregar operario a la lista de registrados hoy
+        if (data.operatorCode && !operarios.includes(data.operatorCode)) {
+          operarios.push(data.operatorCode);
+        }
+      });
+
+      setOperariosRegistradosHoy(operarios);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchUltimosHorometros = async () => {
@@ -67,7 +120,7 @@ const F1315 = () => {
           const data = doc.data() as RegistroCard;
 
           data.machines.forEach((machine) => {
-            const clave = machine.machine; // ✅ Solo por máquina, no por operador
+            const clave = machine.machine;
 
             const registroActual = ultimos[clave];
 
@@ -83,7 +136,6 @@ const F1315 = () => {
           });
         });
 
-        // Extrae solo los horómetros
         const soloHorometros: Record<string, string> = {};
         for (const clave in ultimos) {
           soloHorometros[clave] = ultimos[clave].horometroFinal;
@@ -105,6 +157,7 @@ const F1315 = () => {
   const [referencias, setReferencias] = useState<
     { nombre: string; codigo: string }[]
   >([]);
+
   useEffect(() => {
     const fetchReferencias = async () => {
       try {
@@ -164,7 +217,7 @@ const F1315 = () => {
 
       setMachineInputs(
         found.machines.map((machine) => {
-          const clave = machine; // ✅ Ya no depende del operador
+          const clave = machine;
           const horometroPrevio = ultimosHorometros[clave] || '';
           return {
             machine,
@@ -193,7 +246,7 @@ const F1315 = () => {
       fecha,
       operatorCode,
       machines: [...machineInputs],
-      paradasMayores: '' // Puedes ajustar el valor según tu lógica
+      paradasMayores: ''
     };
     setRegistros([...registros, nuevoRegistro]);
     setFecha('');
@@ -298,12 +351,90 @@ const F1315 = () => {
 
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   };
+
+  // Componente de globo indicador
+  const EstadoRegistroGlobo = ({ operario }: { operario: string }) => {
+    const haRegistrado = operariosRegistradosHoy.includes(operario);
+
+    return (
+      <div
+        className={`w-3 h-3 rounded-full ${
+          haRegistrado ? 'bg-green-500' : 'bg-red-500'
+        }`}
+        title={
+          operario +
+          (haRegistrado ? ' - Ya registró hoy' : ' - No ha registrado hoy')
+        }
+      ></div>
+    );
+  };
+
   return (
     <div className="flex flex-col items-center p-5 w-full bg-gray-200 rounded-2xl backgroundForm">
+      {/* Panel de estado compacto */}
+      <div className="w-full max-w-2xl mb-4 bg-blue-900 p-2 border-white rounded-lg">
+        <div className="flex justify-between items-center">
+          <h3
+            className="text-sm font-semibold text-white cursor-pointer"
+            onClick={() => setShowStatusPanel(!showStatusPanel)}
+          >
+            Estado de registros hoy ({operariosRegistradosHoy.length}/
+            {assignMachineUser.length})
+          </h3>
+          <span
+            className="text-xs text-white cursor-pointer"
+            onClick={() => setShowStatusPanel(!showStatusPanel)}
+          >
+            {showStatusPanel ? '▲' : '▼'}
+          </span>
+        </div>
+
+        {showStatusPanel && (
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            {assignMachineUser.map((operario) => {
+              const haRegistrado = operariosRegistradosHoy.includes(
+                operario.operator
+              );
+
+              return (
+                <div
+                  key={operario.id}
+                  className="flex items-center p-1 bg-blue-800 rounded"
+                  title={
+                    operario.operator +
+                    (haRegistrado
+                      ? ' - Ya registró hoy'
+                      : ' - No ha registrado hoy')
+                  }
+                >
+                  <EstadoRegistroGlobo operario={operario.operator} />
+                  <span className="ml-1 text-xs text-white truncate">
+                    {operario.operator}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="mb-4 w-full max-w-2xl">
-        <label className="block text-white text-xs font-bold mb-2 uppercase tracking-wide">
-          Buscar código de operario
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="block text-white text-xs font-bold mb-2 uppercase tracking-wide">
+            Buscar código de operario
+          </label>
+          {operatorCode && (
+            <div className="flex items-center">
+              <EstadoRegistroGlobo operario={operatorCode} />
+              <span className="ml-1 text-xs text-white">
+                {operariosRegistradosHoy.includes(operatorCode)
+                  ? 'Registrado'
+                  : 'Pendiente'}
+              </span>
+            </div>
+          )}
+        </div>
+
         <input
           type="number"
           value={operatorCode}

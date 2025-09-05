@@ -15,6 +15,7 @@ import Picado from './components/picado/Picado';
 import ProtectedRoute from './components/protectedRoutes/ProtectedRoute';
 import Role from './components/admin/Role';
 import ReferenciaForm from './components/forms/ReferenciaForm';
+import ControlRegistros from './components/controlRegistros/ControlRegistros';
 
 function App() {
   return (
@@ -71,6 +72,14 @@ function App() {
               }
             >
               <Route
+                path="controlRegistros"
+                element={
+                  <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+                    <ControlRegistros />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="createMachine"
                 element={
                   <ProtectedRoute allowedRoles={['superadmin']}>
@@ -105,7 +114,6 @@ function App() {
                 element={<EficencePicado editable={true} />}
               />
             </Route>
-
             <Route
               path="data"
               element={
