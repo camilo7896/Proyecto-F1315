@@ -153,6 +153,10 @@ const Login: React.FC = () => {
           <img className="img2" src={Img2} alt="img2" />
         </div>
       </div>
+      {/* Version */}
+      <div className="absolute bottom-5 text-gray-400 text-sm">
+        Versión 1.0.2
+      </div>
     </div>
   );
 };
