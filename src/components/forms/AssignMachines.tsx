@@ -272,7 +272,7 @@ const AssignMachines: React.FC = () => {
           type="submit"
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          {editingId ? 'Actualizar' : 'Asignar'}
+          {editingId ? 'Actualizar' : 'Asignar máquinas'}
         </button>
       </form>
       <div className="bg-gray-700 p-3 mt-5">

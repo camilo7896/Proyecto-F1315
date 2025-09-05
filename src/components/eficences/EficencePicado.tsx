@@ -3,12 +3,18 @@ import {
   getDocs,
   getFirestore,
   doc,
-  updateDoc
+  updateDoc,
+  deleteDoc,
+  type DocumentData
 } from 'firebase/firestore';
+import {
+  getAuth,
+  reauthenticateWithCredential,
+  EmailAuthProvider
+} from 'firebase/auth';
 
 import app from '../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
-import { getAuth } from 'firebase/auth';
 import RaceOperator from '../Race';
 
 const db = getFirestore(app);
@@ -42,6 +48,64 @@ type Registro = {
     valorAnterior: Partial<Machine>;
     valorNuevo: Partial<Machine>;
   }[];
+  estado?: string;
+};
+
+type PasswordModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (password: string) => void;
+};
+
+const PasswordModal: React.FC<PasswordModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm
+}) => {
+  const [password, setPassword] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    onConfirm(password);
+    setPassword('');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg w-96">
+        <h3 className="text-lg font-semibold mb-4">
+          Verificación de contraseña
+        </h3>
+        <p className="mb-4">
+          Por favor ingrese su contraseña para confirmar la eliminación:
+        </p>
+
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full border p-2 rounded mb-4"
+          placeholder="Ingrese su contraseña"
+        />
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="bg-gray-300 text-gray-700 px-4 py-2 rounded"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="bg-red-600 text-white px-4 py-2 rounded"
+          >
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const EficencePicado: React.FC<{ editable?: boolean }> = ({
@@ -52,8 +116,10 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   const [editData, setEditData] = useState<Partial<Machine>>({});
   const [editHoras, setEditHoras] = useState<string>('');
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [selectedRegId, setSelectedRegId] = useState<string | null>(null);
 
-  const [sumaEstandarHoras] = useState<number>(0);
+  // const [sumaEstandarHoras] = useState<number>(0);
 
   // modal de quien edito
   const [modalVisible, setModalVisible] = useState(false);
@@ -196,6 +262,11 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   }, 0);
 
   const handleEdit = (reg: Registro, machineIndex: number) => {
+    if (reg.estado === 'Revisado') {
+      alert('No se puede editar un registro que ya ha sido revisado.');
+      return;
+    }
+
     setEditId(reg.id + '-' + machineIndex);
     const machine = reg.machines[machineIndex];
 
@@ -207,10 +278,107 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     setEditHoras(String(machine.horasAsignadas));
   };
 
+  // Función para reautenticar al usuario
+  const reauthenticateUser = async (password: string): Promise<boolean> => {
+    const user = auth.currentUser;
+    if (!user || !user.email) return false;
+
+    const credential = EmailAuthProvider.credential(user.email, password);
+
+    try {
+      await reauthenticateWithCredential(user, credential);
+      return true;
+    } catch (error) {
+      console.error('Error en reautenticación:', error);
+      return false;
+    }
+  };
+
+  // Función para eliminar con verificación de contraseña
+  const handleDeleteWithPassword = async (regId: string, password: string) => {
+    // Primera confirmación
+    if (!window.confirm('¿Está seguro de que desea eliminar este registro?')) {
+      return;
+    }
+
+    // Verificar contraseña
+    const isAuthenticated = await reauthenticateUser(password);
+
+    if (!isAuthenticated) {
+      alert('Contraseña incorrecta. No se puede eliminar el registro.');
+      return;
+    }
+
+    // Segunda confirmación después de verificación de contraseña
+    if (
+      !window.confirm(
+        'Esta acción no se puede deshacer. ¿Confirma la eliminación?'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'registro_horometros', regId));
+      setRegistros((prev) => prev.filter((reg) => reg.id !== regId));
+      alert('Registro eliminado correctamente');
+    } catch (error) {
+      console.error('Error al eliminar el registro:', error);
+      alert('Error al eliminar el registro');
+    }
+  };
+
+  // Función para abrir el modal de contraseña
+  const openPasswordModal = (regId: string) => {
+    const reg = registros.find((r) => r.id === regId);
+    if (reg && reg.estado === 'Revisado') {
+      alert('No se puede eliminar un registro que ya ha sido revisado.');
+      return;
+    }
+
+    setSelectedRegId(regId);
+    setPasswordModalOpen(true);
+  };
+
+  // Función para manejar la confirmación con contraseña
+  const handlePasswordConfirm = async (password: string) => {
+    if (selectedRegId) {
+      await handleDeleteWithPassword(selectedRegId, password);
+    }
+    setPasswordModalOpen(false);
+    setSelectedRegId(null);
+  };
+
+  // Función para actualizar el estado (Revisado/Rechazado)
+  const handleEstadoChange = async (regId: string, nuevoEstado: string) => {
+    try {
+      await updateDoc(doc(db, 'registro_horometros', regId), {
+        estado: nuevoEstado,
+        fechaUltimaEdicion: new Date().toISOString(),
+        editadoPor: currentUserEmail ?? 'Desconocido'
+      });
+
+      // Actualizar el estado local
+      setRegistros((prev) =>
+        prev.map((reg) =>
+          reg.id === regId ? { ...reg, estado: nuevoEstado } : reg
+        )
+      );
+    } catch (error) {
+      console.error('Error al actualizar el estado:', error);
+    }
+  };
+
   const handleSave = async (regId: string, machineIndex: number) => {
     const index = registros.findIndex((r) => r.id === regId);
     if (index === -1) return;
     const reg = registros[index];
+
+    if (reg.estado === 'Revisado') {
+      alert('No se puede editar un registro que ya ha sido revisado.');
+      setEditId(null);
+      return;
+    }
 
     const horasNum = parseFloat(editHoras);
     if (isNaN(horasNum)) {
@@ -247,9 +415,17 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         editData.observaciones ?? originalMachine?.observaciones ?? ''
     };
 
-    let fechaISO = reg.fecha;
+    // Determinar si la fecha fue modificada
+    let fechaISO = reg.fecha; // Mantener la fecha original por defecto
+
     if (editData.fechaHora) {
-      fechaISO = new Date(editData.fechaHora).toISOString();
+      const nuevaFecha = new Date(editData.fechaHora);
+      const fechaOriginal = new Date(reg.fecha);
+
+      // Solo actualizar si la fecha realmente cambió (comparando timestamps)
+      if (nuevaFecha.getTime() !== fechaOriginal.getTime()) {
+        fechaISO = nuevaFecha.toISOString();
+      }
     }
 
     const camposModificados: {
@@ -272,9 +448,9 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     const usuario = currentUserEmail ?? 'Desconocido';
 
     try {
-      await updateDoc(doc(db, 'registro_horometros', regId), {
+      // Solo incluir fecha en la actualización si realmente cambió
+      const updateData: Record<string, unknown> = {
         machines: newMachines,
-        fecha: fechaISO,
         editadoPor: usuario,
         camposModificados: camposModificados.join(', '),
         fechaUltimaEdicion: new Date().toISOString(),
@@ -297,9 +473,24 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
             }, {} as Partial<Machine>)
           }
         ]
-      });
+      };
+
+      // Solo agregar fecha al objeto de actualización si cambió
+      if (fechaISO !== reg.fecha) {
+        updateData.fecha = fechaISO;
+      }
+
+      await updateDoc(
+        doc(db, 'registro_horometros', regId),
+        updateData as DocumentData
+      );
       const newRegistros = [...registros];
-      newRegistros[index] = { ...reg, machines: newMachines, fecha: fechaISO };
+      newRegistros[index] = {
+        ...reg,
+        machines: newMachines,
+        // Solo actualizar fecha en el estado si cambió
+        ...(fechaISO !== reg.fecha ? { fecha: fechaISO } : {})
+      };
       setRegistros(newRegistros);
       setEditId(null);
     } catch (error) {
@@ -325,7 +516,8 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
       'Horas Trabajadas',
       'Estándar',
       'Estandar en horas',
-      'Eficiencia (horas)'
+      'Eficiencia (horas)',
+      'Estado'
     ];
 
     // Usar TODOS los registros (sin filtros)
@@ -355,7 +547,9 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           'Horas Asignadas': mostrarHoras(machine.horasAsignadas || 0),
           'Horas Trabajadas': totalHoras.toFixed(2),
           Estándar: standard,
-          'Eficiencia (horas)': eficiencia.toFixed(2)
+          'Eficiencia (horas)': eficiencia.toFixed(2),
+
+          Estado: reg.estado || 'Pendiente'
         };
       })
     );
@@ -441,14 +635,9 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     });
     return sum;
   }, 0);
-  console.log('h. estándar ' + sumaEstandarHoras);
-  console.log('h. trabajadas ' + sumaHorasTrabajadas);
 
   return (
     <>
-      {/* ********************************eficiencia en horas******************************** */}
-
-      {/* ********************************eficiencia en horas******************************** */}
       <div className="p-6 w-full bg-white rounded-lg border border-gray-200 shadow-lg overflow-x-auto relative">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold text-center text-gray-800"></h2>
@@ -598,8 +787,10 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                 <th className="px-3 py-2 border">Estandar en horas</th>
                 <th className="px-3 py-2 border">Estandar</th>
                 <th className="px-3 py-2 border">Eficiencia en horas</th>
+                <th className="px-3 py-2 border">Estado</th>
                 {editable && <th className="px-3 py-2 border">Acciones</th>}
                 <th className="px-3 py-2 border">📝</th>
+                <th className="px-3 py-2 border">Eliminar</th>
               </tr>
             </thead>
             {/* Cuerpo */}
@@ -640,6 +831,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                     }
 
                     const isEditing = editId === reg.id + '-' + index;
+                    const isRevisado = reg.estado === 'Revisado';
 
                     return (
                       <tr
@@ -659,6 +851,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                                 }))
                               }
                               className="w-full border p-1"
+                              disabled={isRevisado}
                             />
                           ) : (
                             formatearFecha(reg.fecha)
@@ -680,6 +873,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                                 }))
                               }
                               className="w-full border p-1"
+                              disabled={isRevisado}
                             />
                           ) : machine.horometroInicial &&
                             machine.horometroInicial.trim() !== '' ? (
@@ -702,6 +896,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                                 }))
                               }
                               className="w-full border p-1"
+                              disabled={isRevisado}
                             />
                           ) : machine.horometroFinal &&
                             machine.horometroFinal.trim() !== '' ? (
@@ -727,6 +922,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                                 }))
                               }
                               className="w-full border p-1"
+                              disabled={isRevisado}
                             />
                           ) : machine.paradasMayores &&
                             machine.paradasMayores.trim() !== '' ? (
@@ -749,6 +945,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                               onChange={(e) => setEditHoras(e.target.value)}
                               className="w-full border p-1 "
                               min="0"
+                              disabled={isRevisado}
                             />
                           ) : (
                             mostrarHoras(machine.horasAsignadas || 0.0)
@@ -780,6 +977,20 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                         <td className="px-3 py-2 border">
                           {eficiencia.toFixed(2)}
                         </td>
+                        {/* Estado */}
+                        <td className="px-3 py-2 border">
+                          <span
+                            className={`px-2 py-1 rounded text-white ${
+                              reg.estado === 'Revisado'
+                                ? 'bg-green-500'
+                                : reg.estado === 'Rechazado'
+                                  ? 'bg-red-500'
+                                  : 'bg-gray-500'
+                            }`}
+                          >
+                            {reg.estado || 'Pendiente'}
+                          </span>
+                        </td>
                         {/* Acciones */}
                         {editable && (
                           <td className="px-3 py-2 border">
@@ -787,6 +998,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                               <button
                                 onClick={() => handleSave(reg.id, index)}
                                 className="bg-blue-500 text-white px-2 py-1 rounded cursor-pointer"
+                                disabled={isRevisado}
                               >
                                 Guardar
                               </button>
@@ -794,6 +1006,7 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                               <button
                                 onClick={() => handleEdit(reg, index)}
                                 className="bg-gray-500 text-white px-2 py-1 rounded cursor-pointer"
+                                disabled={isRevisado}
                               >
                                 Editar
                               </button>
@@ -811,6 +1024,48 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                                 <span className="text-blue-600">👤</span>
                               </div>
                             )}
+                        </td>
+                        {/* Botones de estado y eliminar */}
+                        <td className="px-3 py-2 border">
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() =>
+                                handleEstadoChange(reg.id, 'Revisado')
+                              }
+                              disabled={isRevisado}
+                              className={`px-2 py-1 rounded text-xs ${
+                                isRevisado
+                                  ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                  : 'bg-green-500 hover:bg-green-600 text-white'
+                              }`}
+                            >
+                              Revisado
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleEstadoChange(reg.id, 'Rechazado')
+                              }
+                              disabled={isRevisado}
+                              className={`px-2 py-1 rounded text-xs ${
+                                isRevisado
+                                  ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                  : 'bg-red-500 hover:bg-red-600 text-white'
+                              }`}
+                            >
+                              Rechazado
+                            </button>
+                            <button
+                              onClick={() => openPasswordModal(reg.id)}
+                              disabled={isRevisado}
+                              className={`px-2 py-1 rounded text-xs ${
+                                isRevisado
+                                  ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                  : 'bg-black hover:bg-gray-800 text-white'
+                              }`}
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -888,6 +1143,12 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
           </strong>
         </div>
       </div>
+
+      <PasswordModal
+        isOpen={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        onConfirm={handlePasswordConfirm}
+      />
     </>
   );
 };
