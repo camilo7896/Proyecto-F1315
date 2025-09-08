@@ -1051,47 +1051,49 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                               </div>
                             )}
                         </td>
-                        {/* Botones de estado y eliminar */}
+                        {/* Botones de estado y eliminar ************************************************************************************/}
                         <td className="px-3 py-2 border">
-                          <div className="flex flex-col gap-2">
-                            <button
-                              onClick={() =>
-                                handleEstadoChange(reg.id, 'Revisado')
-                              }
-                              disabled={isRevisado}
-                              className={`px-2 py-1 rounded text-xs ${
-                                isRevisado
-                                  ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                  : 'bg-green-500 hover:bg-green-600 text-white'
-                              }`}
-                            >
-                              Revisado
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleEstadoChange(reg.id, 'Rechazado')
-                              }
-                              disabled={isRevisado}
-                              className={`px-2 py-1 rounded text-xs ${
-                                isRevisado
-                                  ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                  : 'bg-red-500 hover:bg-red-600 text-white'
-                              }`}
-                            >
-                              Rechazado
-                            </button>
-                            <button
-                              onClick={() => openPasswordModal(reg.id)}
-                              disabled={isRevisado}
-                              className={`px-2 py-1 rounded text-xs ${
-                                isRevisado
-                                  ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                  : 'bg-black hover:bg-gray-800 text-white'
-                              }`}
-                            >
-                              Eliminar
-                            </button>
-                          </div>
+                          {editable && (
+                            <div className="flex flex-col gap-1">
+                              <button
+                                onClick={() =>
+                                  handleEstadoChange(reg.id, 'Revisado')
+                                }
+                                disabled={isRevisado}
+                                className={`px-2 py-1 rounded text-xs ${
+                                  isRevisado
+                                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                    : 'bg-green-500 hover:bg-green-600 text-white'
+                                }`}
+                              >
+                                Revisado
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleEstadoChange(reg.id, 'Rechazado')
+                                }
+                                disabled={isRevisado}
+                                className={`px-2 py-1 rounded text-xs ${
+                                  isRevisado
+                                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                    : 'bg-red-500 hover:bg-red-600 text-white'
+                                }`}
+                              >
+                                Rechazado
+                              </button>
+                              <button
+                                onClick={() => openPasswordModal(reg.id)}
+                                disabled={isRevisado}
+                                className={`px-2 py-1 rounded text-xs ${
+                                  isRevisado
+                                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                    : 'bg-black hover:bg-gray-800 text-white'
+                                }`}
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );

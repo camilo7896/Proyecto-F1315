@@ -31,6 +31,23 @@ interface DayResult {
   }[];
 }
 
+// Función para extraer la hora de una cadena de fecha ISO
+const extraerHoraDesdeFechaISO = (fechaISO: string): string => {
+  try {
+    // La fecha viene en formato "2025-09-05T13:15:34" (Colombia UTC-5)
+    // Extraemos directamente la parte de la hora
+    const partes = fechaISO.split('T');
+    if (partes.length > 1) {
+      const tiempo = partes[1];
+      return tiempo.substring(0, 5); // Devuelve "13:15"
+    }
+    return 'Hora no disponible';
+  } catch (e) {
+    console.error('Error extrayendo hora desde fecha ISO:', e);
+    return 'Hora no disponible';
+  }
+};
+
 const ControlRegistros: React.FC = () => {
   const [fechaInicio, setFechaInicio] = useState<string>('');
   const [fechaFin, setFechaFin] = useState<string>('');
@@ -70,9 +87,9 @@ const ControlRegistros: React.FC = () => {
     setCargando(true);
 
     try {
-      // Convertir fechas a objetos Date en hora de Colombia (UTC-5)
-      const inicio = new Date(`${fechaInicio}T${horaInicio}:00-05:00`);
-      const fin = new Date(`${fechaFin}T${horaFin}:00-05:00`);
+      // Crear fechas de inicio y fin en formato Colombia
+      const inicio = new Date(`${fechaInicio}T${horaInicio}:00`);
+      const fin = new Date(`${fechaFin}T${horaFin}:00`);
 
       // Cargar todos los registros
       const querySnapshot = await getDocs(
@@ -86,10 +103,11 @@ const ControlRegistros: React.FC = () => {
           }) as RegistroCard
       );
 
-      // Filtrar registros dentro del rango en hora de Colombia
+      // Filtrar registros dentro del rango
       const registrosData = allRegistros.filter((reg) => {
         try {
-          const regDate = new Date(reg.fecha + '-05:00');
+          // La fecha está en formato "2025-09-05T13:15:34" (Colombia UTC-5)
+          const regDate = new Date(reg.fecha);
           return regDate >= inicio && regDate <= fin;
         } catch (e) {
           console.error('Error procesando fecha del registro:', reg.fecha, e);
@@ -112,7 +130,7 @@ const ControlRegistros: React.FC = () => {
           // Encontrar registros de este día
           const registrosDelDia = registrosData.filter((reg) => {
             try {
-              const regDate = new Date(reg.fecha + '-05:00');
+              const regDate = new Date(reg.fecha);
               const regFechaStr = regDate.toISOString().split('T')[0];
               return regFechaStr === fechaStr;
             } catch {
@@ -146,17 +164,8 @@ const ControlRegistros: React.FC = () => {
 
               let horaRegistro = 'Hora no disponible';
               if (registroOperario && registroOperario.fecha) {
-                try {
-                  const fechaRegistro = new Date(
-                    registroOperario.fecha + '-05:00'
-                  );
-                  horaRegistro = fechaRegistro.toLocaleTimeString('es-CO', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  });
-                } catch (e) {
-                  console.error('Error procesando hora del registro:', e);
-                }
+                // Extraer la hora directamente del campo fecha
+                horaRegistro = extraerHoraDesdeFechaISO(registroOperario.fecha);
               }
 
               registered.push({
