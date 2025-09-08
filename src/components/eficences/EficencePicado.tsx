@@ -14,7 +14,7 @@ import {
 } from 'firebase/auth';
 
 import app from '../../lib/credentialFirebase';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import RaceOperator from '../Race';
 
 const db = getFirestore(app);
@@ -49,6 +49,7 @@ type Registro = {
     valorNuevo: Partial<Machine>;
   }[];
   estado?: string;
+  timestamp?: string; // Nuevo campo para ordenamiento
 };
 
 type PasswordModalProps = {
@@ -118,8 +119,6 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [selectedRegId, setSelectedRegId] = useState<string | null>(null);
-
-  // const [sumaEstandarHoras] = useState<number>(0);
 
   // modal de quien edito
   const [modalVisible, setModalVisible] = useState(false);
@@ -193,7 +192,9 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
         );
         const data: Registro[] = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...(doc.data() as Omit<Registro, 'id'>)
+          ...(doc.data() as Omit<Registro, 'id'>),
+          // Incluimos el timestamp si existe en el documento
+          timestamp: doc.data().timestamp || doc.data().fecha // Usamos fecha como fallback
         }));
         setRegistros(data);
       } catch (error) {
@@ -218,7 +219,6 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
       }
       return true;
     })
-
     .filter((reg) => {
       if (maquinaFiltro) {
         return reg.machines.some((m) => m.machine === maquinaFiltro);
@@ -228,8 +228,15 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     .filter((reg) =>
       filtroOperario ? reg.operatorCode === filtroOperario : true
     )
+    // Ordenar por timestamp (más reciente primero)
     .sort((a, b) => {
-      return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+      const timestampA = a.timestamp
+        ? new Date(a.timestamp).getTime()
+        : new Date(a.fecha).getTime();
+      const timestampB = b.timestamp
+        ? new Date(b.timestamp).getTime()
+        : new Date(b.fecha).getTime();
+      return timestampB - timestampA;
     })
     .filter((reg) => {
       if (mesFiltro) {
@@ -350,24 +357,27 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
   };
 
   // Función para actualizar el estado (Revisado/Rechazado)
-  const handleEstadoChange = async (regId: string, nuevoEstado: string) => {
-    try {
-      await updateDoc(doc(db, 'registro_horometros', regId), {
-        estado: nuevoEstado,
-        fechaUltimaEdicion: new Date().toISOString(),
-        editadoPor: currentUserEmail ?? 'Desconocido'
-      });
+  const handleEstadoChange = useCallback(
+    async (regId: string, nuevoEstado: string) => {
+      try {
+        await updateDoc(doc(db, 'registro_horometros', regId), {
+          estado: nuevoEstado,
+          fechaUltimaEdicion: new Date().toISOString(),
+          editadoPor: currentUserEmail ?? 'Desconocido'
+        });
 
-      // Actualizar el estado local
-      setRegistros((prev) =>
-        prev.map((reg) =>
-          reg.id === regId ? { ...reg, estado: nuevoEstado } : reg
-        )
-      );
-    } catch (error) {
-      console.error('Error al actualizar el estado:', error);
-    }
-  };
+        // Actualizar el estado local
+        setRegistros((prev) =>
+          prev.map((reg) =>
+            reg.id === regId ? { ...reg, estado: nuevoEstado } : reg
+          )
+        );
+      } catch (error) {
+        console.error('Error al actualizar el estado:', error);
+      }
+    },
+    [currentUserEmail]
+  );
 
   const handleSave = async (regId: string, machineIndex: number) => {
     const index = registros.findIndex((r) => r.id === regId);
@@ -493,8 +503,10 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
       };
       setRegistros(newRegistros);
       setEditId(null);
+      alert('Cambios guardados correctamente');
     } catch (error) {
       console.error('Error al guardar:', error);
+      alert('Error al guardar los cambios');
     }
   };
 
@@ -666,122 +678,168 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
     <>
       <div className="p-6 w-full bg-white rounded-lg border border-gray-200 shadow-lg overflow-x-auto relative">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold text-center text-gray-800"></h2>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold text-center text-gray-800"></h2>
-            <button
-              onClick={handleExportAllCSV}
-              className="bg-blue-950 hover:bg-blue-900 text-white px-4 py-2 rounded shadow cursor-pointer"
+          <h2 className="text-2xl font-semibold text-center text-gray-800">
+            Reporte de Eficiencia Picado
+          </h2>
+          <button
+            onClick={handleExportAllCSV}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow cursor-pointer flex items-center"
+          >
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              Exportar CSV
-            </button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            Exportar CSV
+          </button>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg mb-6">
+          <h3 className="text-lg font-semibold text-blue-800 mb-3">Filtros</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Filtro por día */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por día:
+              </label>
+              <input
+                type="date"
+                value={fechaFiltro}
+                onChange={(e) => setFechaFiltro(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Filtro por máquina */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por máquina:
+              </label>
+              <select
+                value={maquinaFiltro}
+                onChange={(e) => setMaquinaFiltro(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Todas las máquinas</option>
+                {Array.from(
+                  new Set(
+                    registros.flatMap((reg) =>
+                      reg.machines.map((m) => m.machine)
+                    )
+                  )
+                ).map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* filtro mes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por mes:
+              </label>
+              <input
+                type="month"
+                value={mesFiltro}
+                onChange={(e) => setMesFiltro(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* filtro operario */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Filtrar por operario:
+              </label>
+              <select
+                value={filtroOperario}
+                onChange={(e) => setFiltroOperario(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Todos los operarios</option>
+                {operarios.map((op) => (
+                  <option key={op} value={op}>
+                    {op}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
-        <hr />
-        <br />
-        {/* Filtros */}
-        <div className="flex flex-col md:flex-row mb-4 gap-2 items-center">
-          {/* Filtro por día */}
-          <div>
-            <label className="mr-2 font-semibold">Filtrar por día:</label>
-            <input
-              type="date"
-              value={fechaFiltro}
-              onChange={(e) => setFechaFiltro(e.target.value)}
-              className="border p-1 rounded"
-            />
-          </div>
-          {/* Filtro por máquina */}
-          <div>
-            <label className="mr-2 font-semibold">Filtrar por máquina:</label>
-            <select
-              value={maquinaFiltro}
-              onChange={(e) => setMaquinaFiltro(e.target.value)}
-              className="border p-1 rounded"
-            >
-              <option value="">Todas</option>
-              {Array.from(
-                new Set(
-                  registros.flatMap((reg) => reg.machines.map((m) => m.machine))
-                )
-              ).map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {/* Filtros mes y operario */}
-        <div className="flex flex-col md:flex-row mb-4 gap-2 items-center">
-          {/* filtro mes */}
-          <div>
-            <label className="mr-2 font-semibold">Filtrar por mes:</label>
-            <input
-              type="month"
-              value={mesFiltro}
-              onChange={(e) => setMesFiltro(e.target.value)}
-              className="border p-1 rounded"
-            />
-          </div>
-          {/* filtro operario */}
-          <div>
-            <label className="mr-2 font-semibold">Filtrar por operario:</label>
-            <select
-              value={filtroOperario}
-              onChange={(e) => setFiltroOperario(e.target.value)}
-              className="border p-1 rounded"
-            >
-              <option value="">Todos</option>
-              {operarios.map((op) => (
-                <option key={op} value={op}>
-                  {op}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-4 gap-4 my-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Horas Asignadas */}
-          <div className="bg-blue-100 p-3 rounded shadow">
-            <p className="font-bold">Total Horas Asignadas</p>
-            <p>{sumaHorasAsignadas.toFixed(2)} horas</p>
+          <div className="bg-blue-100 p-4 rounded-lg shadow-sm border border-blue-200">
+            <p className="font-semibold text-blue-800 text-sm">
+              Total Horas Asignadas
+            </p>
+            <p className="text-2xl font-bold text-blue-600">
+              {sumaHorasAsignadas.toFixed(2)} horas
+            </p>
           </div>
 
           {/* Horas Trabajadas */}
-          <div className="bg-green-100 p-3 rounded shadow">
-            <p className="font-bold">Total Horas Trabajadas</p>
-            <p>{sumaHorasTrabajadas.toFixed(2)} horas</p>
+          <div className="bg-green-100 p-4 rounded-lg shadow-sm border border-green-200">
+            <p className="font-semibold text-green-800 text-sm">
+              Total Horas Trabajadas
+            </p>
+            <p className="text-2xl font-bold text-green-600">
+              {sumaHorasTrabajadas.toFixed(2)} horas
+            </p>
           </div>
 
           {/* Estandar en Horas */}
-          <div className="bg-purple-100 p-3 rounded shadow">
-            <p className="font-bold">Total Estandar en Horas</p>
-            <p>{sumaEstandarHoras1.toFixed(2)} horas</p>
+          <div className="bg-purple-100 p-4 rounded-lg shadow-sm border border-purple-200">
+            <p className="font-semibold text-purple-800 text-sm">
+              Total Estandar en Horas
+            </p>
+            <p className="text-2xl font-bold text-purple-600">
+              {sumaEstandarHoras1.toFixed(2)} horas
+            </p>
           </div>
 
           {/* Eficiencia */}
           <div
-            className={`p-3 rounded shadow ${
-              eficienciaHoras >= 0 ? 'bg-green-200' : 'bg-red-200'
+            className={`p-4 rounded-lg shadow-sm border ${
+              eficienciaHoras >= 0
+                ? 'bg-green-100 border-green-200'
+                : 'bg-red-100 border-red-200'
             }`}
           >
-            <p className="font-bold">Eficiencia Total</p>
-
-            <strong className="text-sm">
-              Porcentaje:{' '}
-              {sumaEstandarHoras1 > 0 && !isNaN(sumaHorasTrabajadas)
-                ? (
-                    (sumaHorasTrabajadas / sumaEstandarHoras1 - 1) *
-                    100
-                  ).toFixed(2)
-                : '0.00'}
-              %
-            </strong>
+            <p className="font-semibold text-sm">Eficiencia Total</p>
+            <p
+              className={`text-2xl font-bold ${eficienciaHoras >= 0 ? 'text-green-600' : 'text-red-600'}`}
+            >
+              {eficienciaHoras.toFixed(2)} horas
+            </p>
+            <p className="text-sm mt-1">
+              <strong>
+                Porcentaje:{' '}
+                {sumaEstandarHoras1 > 0 && !isNaN(sumaHorasTrabajadas)
+                  ? (
+                      (sumaHorasTrabajadas / sumaEstandarHoras1 - 1) *
+                      100
+                    ).toFixed(2)
+                  : '0.00'}
+                %
+              </strong>
+            </p>
           </div>
         </div>
-        <p className="mb-2 text-sm text-gray-600">
-          Total de ítems:{' '}
+
+        <p className="mb-4 text-sm text-gray-600 bg-gray-100 p-2 rounded-lg">
+          Total de registros: {registrosFiltrados.length} | Total de ítems:{' '}
           {
             registrosFiltrados.flatMap((reg) =>
               reg.machines.filter(
@@ -790,279 +848,139 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
             ).length
           }
         </p>
+
         <RaceOperator
           registrosFiltrados={registrosFiltrados}
           machineStandards={machineStandards}
-        />{' '}
-        {/* Tabla */}
-        <div className="overflow-x-auto w-full">
-          <table className="min-w-full w-full border border-gray-300 text-sm text-left">
-            {/* Encabezado */}
-            <thead className="backgroundForm text-white">
+        />
+
+        {/* Tabla con encabezado fijo */}
+        <div
+          className="overflow-x-auto w-full rounded-lg border border-gray-200 shadow-sm"
+          style={{ maxHeight: '70vh' }}
+        >
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            {/* Encabezado fijo */}
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-3 py-2 border">Fecha</th>
-                <th className="px-3 py-2 border">Maquina</th>
-                <th className="px-3 py-2 border">Cod.Operario</th>
-                <th className="px-3 py-2 border">Horometro inicial</th>
-                <th className="px-3 py-2 border">Horometro final</th>
-                <th className="px-3 py-2 border">reference</th>
-                <th className="px-3 py-2 border">Paradas mayores</th>
-                <th className="px-3 py-2 border">Observaciones</th>
-                <th className="px-3 py-2 border">Horas Asignadas</th>
-                <th className="px-3 py-2 border">Horas trabajadas</th>
-                <th className="px-3 py-2 border">Estandar en horas</th>
-                <th className="px-3 py-2 border">Estandar</th>
-                <th className="px-3 py-2 border">Eficiencia en horas</th>
-                <th className="px-3 py-2 border">Estado</th>
-                {editable && <th className="px-3 py-2 border">Acciones</th>}
-                <th className="px-3 py-2 border">📝</th>
-                <th className="px-3 py-2 border">Eliminar</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fecha
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Máquina
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Operario
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  H. Inicial
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  H. Final
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Referencia
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Paradas
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Obs.
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  H. Asignadas
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  H. Trabajadas
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estandar H.
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estandar
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Eficiencia
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                {editable && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                )}
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ediciones
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Admin
+                </th>
               </tr>
             </thead>
+
             {/* Cuerpo */}
-            <tbody>
-              {registrosFiltrados.flatMap((reg) =>
-                reg.machines
-                  .filter((m) => !maquinaFiltro || m.machine === maquinaFiltro)
-                  .map((machine, index) => {
-                    const horoFin = parseFloat(machine.horometroFinal);
-                    const horoIni = parseFloat(machine.horometroInicial);
-                    const totalHoras =
-                      isNaN(horoFin) || isNaN(horoIni) ? 0 : horoFin - horoIni;
-
-                    const standardStr =
-                      machineStandards[machine.machine] ?? '0';
-                    const standard = parseFloat(standardStr);
-                    const horasAsignadas =
-                      typeof machine.horasAsignadas === 'string'
-                        ? parseFloat(machine.horasAsignadas)
-                        : machine.horasAsignadas;
-
-                    let eficiencia = 0;
-                    if (
-                      !isNaN(totalHoras) &&
-                      !isNaN(standard) &&
-                      !isNaN(horasAsignadas)
-                    ) {
-                      eficiencia = totalHoras - standard * horasAsignadas;
-                    }
-
-                    let rowClass = '';
-                    if (eficiencia > 0) {
-                      rowClass = 'bg-green-200';
-                    } else if (eficiencia <= 0 && eficiencia > -1) {
-                      rowClass = 'bg-yellow-200';
-                    } else if (eficiencia <= -1 && eficiencia >= -100) {
-                      rowClass = 'bg-red-200';
-                    }
-
-                    const isEditing = editId === reg.id + '-' + index;
-                    const isRevisado = reg.estado === 'Revisado';
-
-                    return (
-                      <tr
-                        key={`${reg.id}-${index}`}
-                        className={`hover:bg-gray-100 ${rowClass}`}
-                      >
-                        {/* Fecha y hora */}
-                        <td className="px-3 py-2 border">
-                          {isEditing ? (
-                            <input
-                              type="datetime-local"
-                              value={editData.fechaHora ?? ''}
-                              onChange={(e) =>
-                                setEditData((prev) => ({
-                                  ...prev,
-                                  fechaHora: e.target.value
-                                }))
-                              }
-                              className="w-full border p-1"
-                              disabled={isRevisado}
-                            />
-                          ) : (
-                            formatearFecha(reg.fecha)
-                          )}
-                        </td>{' '}
-                        <td className="px-3 py-2 border">{machine.machine}</td>
-                        <td className="px-3 py-2 border">{reg.operatorCode}</td>
-                        {/* Horómetro inicial */}
-                        <td className="px-3 py-2 border">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editData.horometroInicial ?? ''}
-                              onChange={(e) =>
-                                setEditData((prev) => ({
-                                  ...prev,
-                                  horometroInicial: e.target.value
-                                }))
-                              }
-                              className="w-full border p-1"
-                              disabled={isRevisado}
-                            />
-                          ) : machine.horometroInicial &&
-                            machine.horometroInicial.trim() !== '' ? (
-                            parseFloat(machine.horometroInicial).toFixed(2)
-                          ) : (
-                            '0.00'
-                          )}
-                        </td>
-                        {/* Horómetro final */}
-                        <td className="px-3 py-2 border">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editData.horometroFinal ?? ''}
-                              onChange={(e) =>
-                                setEditData((prev) => ({
-                                  ...prev,
-                                  horometroFinal: e.target.value
-                                }))
-                              }
-                              className="w-full border p-1"
-                              disabled={isRevisado}
-                            />
-                          ) : machine.horometroFinal &&
-                            machine.horometroFinal.trim() !== '' ? (
-                            parseFloat(machine.horometroFinal).toFixed(2)
-                          ) : (
-                            '0.00'
-                          )}
-                        </td>
-                        {/* reference */}
-                        <td className="px-3 py-2 border">
-                          {machine.reference ? machine.reference : 'N/A'}
-                        </td>
-                        {/* Paradas mayores */}
-                        <td className="px-3 py-2 border">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editData.paradasMayores ?? ''}
-                              onChange={(e) =>
-                                setEditData((prev) => ({
-                                  ...prev,
-                                  paradasMayores: e.target.value
-                                }))
-                              }
-                              className="w-full border p-1"
-                              disabled={isRevisado}
-                            />
-                          ) : machine.paradasMayores &&
-                            machine.paradasMayores.trim() !== '' ? (
-                            machine.paradasMayores
-                          ) : (
-                            '0.00'
-                          )}
-                        </td>
-                        {/* Observaciones */}
-                        <td className="px-3 py-2 border">
-                          {machine.observaciones}
-                        </td>
-                        {/* Horas asignadas */}
-                        <td className="px-3 py-2 border">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={editHoras}
-                              onChange={(e) => setEditHoras(e.target.value)}
-                              className="w-full border p-1 "
-                              min="0"
-                              disabled={isRevisado}
-                            />
-                          ) : (
-                            mostrarHoras(machine.horasAsignadas || 0.0)
-                          )}
-                        </td>
-                        {/* Horas trabajadas */}
-                        <td className="px-3 py-2 border">
-                          {totalHoras.toFixed(2)}
-                        </td>
-                        {/* Standar x Horas */}
-                        <td className="px-3 py-2 border">
-                          {machineStandards[machine.machine] &&
-                          parseFloat(machineStandards[machine.machine]) > 0
-                            ? (
-                                parseFloat(
-                                  machineStandards[machine.machine] || '0'
-                                ) *
-                                (typeof machine.horasAsignadas === 'string'
-                                  ? parseFloat(machine.horasAsignadas)
-                                  : machine.horasAsignadas || 0)
-                              ).toFixed(2)
-                            : 'N/A'}
-                        </td>
-                        {/* Stand */}
-                        <td className="px-3 py-2 border">
-                          {machineStandards[machine.machine] ?? 'N/A'}
-                        </td>
-                        {/* Eficiencia */}
-                        <td className="px-3 py-2 border">
-                          {eficiencia.toFixed(2)}
-                        </td>
-                        {/* Estado */}
-                        <td className="px-3 py-2 border">
+            <tbody className="bg-white divide-y divide-gray-200">
+              {registrosFiltrados.map((reg) => (
+                <>
+                  {/* Fila de encabezado del registro */}
+                  <tr key={`header-${reg.id}`} className="bg-blue-50">
+                    <td
+                      colSpan={17}
+                      className="px-4 py-3 font-medium text-blue-800"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          Registro: {formatearFecha(reg.fecha)} - Operario:{' '}
+                          {reg.operatorCode} - {reg.operatorName}
+                        </div>
+                        <div className="flex items-center space-x-2">
                           <span
-                            className={`px-2 py-1 rounded text-white ${
+                            className={`px-2 py-1 rounded text-xs font-semibold ${
                               reg.estado === 'Revisado'
-                                ? 'bg-green-500'
+                                ? 'bg-green-100 text-green-800'
                                 : reg.estado === 'Rechazado'
-                                  ? 'bg-red-500'
-                                  : 'bg-gray-500'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-gray-100 text-gray-800'
                             }`}
                           >
                             {reg.estado || 'Pendiente'}
                           </span>
-                        </td>
-                        {/* Acciones */}
-                        {editable && (
-                          <td className="px-3 py-2 border">
-                            {isEditing ? (
-                              <button
-                                onClick={() => handleSave(reg.id, index)}
-                                className="bg-blue-500 text-white px-2 py-1 rounded cursor-pointer"
-                                disabled={isRevisado}
-                              >
-                                Guardar
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleEdit(reg, index)}
-                                className="bg-gray-500 text-white px-2 py-1 rounded cursor-pointer"
-                                disabled={isRevisado}
-                              >
-                                Editar
-                              </button>
-                            )}
-                          </td>
-                        )}
-                        {/* Icono usuario con detalles */}
-                        <td className="px-3 py-2 border text-center">
+
                           {reg.detallesEdicion &&
                             reg.detallesEdicion.length > 0 && (
-                              <div
-                                className="relative inline-block cursor-pointer"
+                              <button
                                 onClick={() => handleMostrarDetalles(reg)}
+                                className="text-blue-600 hover:text-blue-800"
+                                title="Ver historial de ediciones"
                               >
-                                <span className="text-blue-600">👤</span>
-                              </div>
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                                  />
+                                </svg>
+                              </button>
                             )}
-                        </td>
-                        {/* Botones de estado y eliminar ************************************************************************************/}
-                        <td className="px-3 py-2 border">
+
                           {editable && (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex space-x-1">
                               <button
                                 onClick={() =>
                                   handleEstadoChange(reg.id, 'Revisado')
                                 }
-                                disabled={isRevisado}
+                                disabled={reg.estado === 'Revisado'}
                                 className={`px-2 py-1 rounded text-xs ${
-                                  isRevisado
-                                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                  reg.estado === 'Revisado'
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-green-500 hover:bg-green-600 text-white'
                                 }`}
                               >
@@ -1072,10 +990,10 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                                 onClick={() =>
                                   handleEstadoChange(reg.id, 'Rechazado')
                                 }
-                                disabled={isRevisado}
+                                disabled={reg.estado === 'Revisado'}
                                 className={`px-2 py-1 rounded text-xs ${
-                                  isRevisado
-                                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                                  reg.estado === 'Revisado'
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-red-500 hover:bg-red-600 text-white'
                                 }`}
                               >
@@ -1083,92 +1001,436 @@ const EficencePicado: React.FC<{ editable?: boolean }> = ({
                               </button>
                               <button
                                 onClick={() => openPasswordModal(reg.id)}
-                                disabled={isRevisado}
+                                disabled={reg.estado === 'Revisado'}
                                 className={`px-2 py-1 rounded text-xs ${
-                                  isRevisado
-                                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                    : 'bg-black hover:bg-gray-800 text-white'
+                                  reg.estado === 'Revisado'
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-gray-700 hover:bg-gray-800 text-white'
                                 }`}
                               >
                                 Eliminar
                               </button>
                             </div>
                           )}
-                        </td>
-                      </tr>
-                    );
-                  })
-              )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Filas de máquinas */}
+                  {reg.machines
+                    .filter(
+                      (m) => !maquinaFiltro || m.machine === maquinaFiltro
+                    )
+                    .map((machine, index) => {
+                      const horoFin = parseFloat(machine.horometroFinal);
+                      const horoIni = parseFloat(machine.horometroInicial);
+                      const totalHoras =
+                        isNaN(horoFin) || isNaN(horoIni)
+                          ? 0
+                          : horoFin - horoIni;
+
+                      const standardStr =
+                        machineStandards[machine.machine] ?? '0';
+                      const standard = parseFloat(standardStr);
+                      const horasAsignadas =
+                        typeof machine.horasAsignadas === 'string'
+                          ? parseFloat(machine.horasAsignadas)
+                          : machine.horasAsignadas;
+
+                      let eficiencia = 0;
+                      if (
+                        !isNaN(totalHoras) &&
+                        !isNaN(standard) &&
+                        !isNaN(horasAsignadas)
+                      ) {
+                        eficiencia = totalHoras - standard * horasAsignadas;
+                      }
+
+                      let rowClass = '';
+                      if (eficiencia > 0) {
+                        rowClass = 'bg-green-50';
+                      } else if (eficiencia <= 0 && eficiencia > -1) {
+                        rowClass = 'bg-yellow-50';
+                      } else if (eficiencia <= -1 && eficiencia >= -100) {
+                        rowClass = 'bg-red-50';
+                      }
+
+                      const isEditing = editId === reg.id + '-' + index;
+                      const isRevisado = reg.estado === 'Revisado';
+
+                      return (
+                        <tr
+                          key={`${reg.id}-${index}`}
+                          className={`hover:bg-gray-50 ${rowClass}`}
+                        >
+                          {/* Fecha y hora */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {isEditing ? (
+                              <input
+                                type="datetime-local"
+                                value={editData.fechaHora ?? ''}
+                                onChange={(e) =>
+                                  setEditData((prev) => ({
+                                    ...prev,
+                                    fechaHora: e.target.value
+                                  }))
+                                }
+                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                                disabled={isRevisado}
+                              />
+                            ) : (
+                              formatearFecha(reg.fecha)
+                            )}
+                          </td>
+
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {machine.machine}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {reg.operatorCode}
+                          </td>
+
+                          {/* Horómetro inicial */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editData.horometroInicial ?? ''}
+                                onChange={(e) =>
+                                  setEditData((prev) => ({
+                                    ...prev,
+                                    horometroInicial: e.target.value
+                                  }))
+                                }
+                                className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                                disabled={isRevisado}
+                              />
+                            ) : machine.horometroInicial &&
+                              machine.horometroInicial.trim() !== '' ? (
+                              parseFloat(machine.horometroInicial).toFixed(2)
+                            ) : (
+                              '0.00'
+                            )}
+                          </td>
+
+                          {/* Horómetro final */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editData.horometroFinal ?? ''}
+                                onChange={(e) =>
+                                  setEditData((prev) => ({
+                                    ...prev,
+                                    horometroFinal: e.target.value
+                                  }))
+                                }
+                                className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                                disabled={isRevisado}
+                              />
+                            ) : machine.horometroFinal &&
+                              machine.horometroFinal.trim() !== '' ? (
+                              parseFloat(machine.horometroFinal).toFixed(2)
+                            ) : (
+                              '0.00'
+                            )}
+                          </td>
+
+                          {/* reference */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {machine.reference ? machine.reference : 'N/A'}
+                          </td>
+
+                          {/* Paradas mayores */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={editData.paradasMayores ?? ''}
+                                onChange={(e) =>
+                                  setEditData((prev) => ({
+                                    ...prev,
+                                    paradasMayores: e.target.value
+                                  }))
+                                }
+                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                                disabled={isRevisado}
+                              />
+                            ) : machine.paradasMayores &&
+                              machine.paradasMayores.trim() !== '' ? (
+                              machine.paradasMayores
+                            ) : (
+                              '0.00'
+                            )}
+                          </td>
+
+                          {/* Observaciones */}
+                          <td className="px-4 py-3">
+                            <div
+                              className="max-w-xs truncate"
+                              title={machine.observaciones}
+                            >
+                              {machine.observaciones}
+                            </div>
+                          </td>
+
+                          {/* Horas asignadas */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={editHoras}
+                                onChange={(e) => setEditHoras(e.target.value)}
+                                className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                                min="0"
+                                disabled={isRevisado}
+                              />
+                            ) : (
+                              mostrarHoras(machine.horasAsignadas || 0.0)
+                            )}
+                          </td>
+
+                          {/* Horas trabajadas */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {totalHoras.toFixed(2)}
+                          </td>
+
+                          {/* Standar x Horas */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {machineStandards[machine.machine] &&
+                            parseFloat(machineStandards[machine.machine]) > 0
+                              ? (
+                                  parseFloat(
+                                    machineStandards[machine.machine] || '0'
+                                  ) *
+                                  (typeof machine.horasAsignadas === 'string'
+                                    ? parseFloat(machine.horasAsignadas)
+                                    : machine.horasAsignadas || 0)
+                                ).toFixed(2)
+                              : 'N/A'}
+                          </td>
+
+                          {/* Stand */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {machineStandards[machine.machine] ?? 'N/A'}
+                          </td>
+
+                          {/* Eficiencia */}
+                          <td className="px-4 py-3 whitespace-nowrap font-medium">
+                            <span
+                              className={
+                                eficiencia >= 0
+                                  ? 'text-green-600'
+                                  : 'text-red-600'
+                              }
+                            >
+                              {eficiencia.toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* Estado */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                reg.estado === 'Revisado'
+                                  ? 'bg-green-100 text-green-800'
+                                  : reg.estado === 'Rechazado'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-gray-100 text-gray-800'
+                              }`}
+                            >
+                              {reg.estado || 'Pendiente'}
+                            </span>
+                          </td>
+
+                          {/* Acciones */}
+                          {editable && (
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isEditing ? (
+                                <button
+                                  onClick={() => handleSave(reg.id, index)}
+                                  className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm cursor-pointer"
+                                  disabled={isRevisado}
+                                >
+                                  Guardar
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleEdit(reg, index)}
+                                  className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm cursor-pointer"
+                                  disabled={isRevisado}
+                                >
+                                  Editar
+                                </button>
+                              )}
+                            </td>
+                          )}
+
+                          {/* Icono usuario con detalles */}
+                          <td className="px-4 py-3 whitespace-nowrap text-center">
+                            {reg.detallesEdicion &&
+                              reg.detallesEdicion.length > 0 && (
+                                <div
+                                  className="inline-block cursor-pointer"
+                                  onClick={() => handleMostrarDetalles(reg)}
+                                >
+                                  <svg
+                                    className="w-5 h-5 text-blue-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                                    />
+                                  </svg>
+                                </div>
+                              )}
+                          </td>
+
+                          {/* Botones de estado - vacío porque ya se muestran en el encabezado */}
+                          <td className="px-4 py-3 whitespace-nowrap"></td>
+                        </tr>
+                      );
+                    })}
+                </>
+              ))}
             </tbody>
           </table>
-          {modalVisible && registroDetalleModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-4 rounded shadow-lg max-w-lg w-full max-h-full overflow-y-auto">
-                <h2 className="text-xl font-semibold mb-4">
+        </div>
+
+        {modalVisible && registroDetalleModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">
                   Detalles de Edición
                 </h2>
                 <button
-                  className="absolute top-2 right-2 text-red-600 font-bold"
+                  className="text-gray-500 hover:text-gray-700"
                   onClick={handleCerrarModal}
                 >
-                  ✖
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
                 </button>
-                {registroDetalleModal.detallesEdicion?.map((detalle, idx) => (
-                  <div key={idx} className="mb-4 border-b border-gray-300 pb-2">
-                    <p>
-                      <strong>Usuario:</strong> {detalle.usuario}
-                    </p>
-                    <p>
-                      <strong>Fecha y hora:</strong> {detalle.fechaHora}
-                    </p>
-                    <div>
-                      <strong>Modificaciones:</strong>
-                      <ul>
-                        {Object.keys(detalle.valorAnterior).map((campo) => {
-                          const anterior = (
-                            detalle.valorAnterior as Partial<Machine>
-                          )[campo as keyof Machine];
-                          const nuevo = (
-                            detalle.valorNuevo as Partial<Machine>
-                          )[campo as keyof Machine];
+              </div>
 
-                          if (anterior !== nuevo) {
-                            return (
-                              <li key={campo}>
-                                <strong>{campo}:</strong> {anterior} &rarr;{' '}
-                                {nuevo}
-                              </li>
-                            );
-                          }
-                          return null;
-                        })}
-                      </ul>
+              <div className="space-y-4">
+                {registroDetalleModal.detallesEdicion?.map((detalle, idx) => (
+                  <div
+                    key={idx}
+                    className="border-b border-gray-200 pb-4 last:border-0"
+                  >
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          Usuario:
+                        </p>
+                        <p className="font-medium">{detalle.usuario}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">
+                          Fecha y hora:
+                        </p>
+                        <p>{detalle.fechaHora}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-2">
+                        Modificaciones:
+                      </p>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="px-3 py-1 text-left">Campo</th>
+                              <th className="px-3 py-1 text-left">
+                                Valor Anterior
+                              </th>
+                              <th className="px-3 py-1 text-left">
+                                Valor Nuevo
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.keys(detalle.valorAnterior).map((campo) => {
+                              const anterior = (
+                                detalle.valorAnterior as Partial<Machine>
+                              )[campo as keyof Machine];
+                              const nuevo = (
+                                detalle.valorNuevo as Partial<Machine>
+                              )[campo as keyof Machine];
+
+                              if (anterior !== nuevo) {
+                                return (
+                                  <tr
+                                    key={campo}
+                                    className="border-b border-gray-200 last:border-0"
+                                  >
+                                    <td className="px-3 py-1 font-medium">
+                                      {campo}
+                                    </td>
+                                    <td className="px-3 py-1">
+                                      {anterior || '(vacío)'}
+                                    </td>
+                                    <td className="px-3 py-1">
+                                      {nuevo || '(vacío)'}
+                                    </td>
+                                  </tr>
+                                );
+                              }
+                              return null;
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          )}
-        </div>
-        {/* Mostrar total con color */}
+          </div>
+        )}
+
         <div
-          className={`mt-4 p-2 rounded shadow ${
+          className={`mt-6 p-4 rounded-lg shadow-sm ${
             sumaEficienciaTotal >= 0
-              ? 'bg-green-200 text-green-800'
+              ? 'bg-green-100 border border-green-200 text-green-800'
               : sumaEficienciaTotal >= -5 && sumaEficienciaTotal <= -0.1
-                ? 'bg-yellow-200 text-yellow-800'
-                : 'bg-red-200 text-red-800'
+                ? 'bg-yellow-100 border border-yellow-200 text-yellow-800'
+                : 'bg-red-100 border border-red-200 text-red-800'
           }`}
         >
-          <strong className="text-sm">
-            Porcentaje:{' '}
+          {/* <p className="font-semibold">
+            Resumen general - Porcentaje de eficiencia:{' '}
             {sumaEstandarHoras1 > 0 && !isNaN(sumaHorasTrabajadas)
               ? ((sumaHorasTrabajadas / sumaEstandarHoras1 - 1) * 100).toFixed(
                   2
                 )
               : '0.00'}
             %
-          </strong>
+          </p> */}
         </div>
       </div>
 
