@@ -546,6 +546,7 @@ const F1315 = () => {
                     <input
                       type="number"
                       required
+                      readOnly
                       min={3}
                       value={m.horometroInicial}
                       onChange={(e) => {
