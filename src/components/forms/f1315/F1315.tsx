@@ -47,6 +47,14 @@ type RegistroCard = {
   paradasMayores: string;
 };
 
+// Nuevo tipo para análisis de productividad
+type ProductivityAnalysis = {
+  machine: string;
+  issues: string[];
+  recommendations: string[];
+  efficiency: number;
+};
+
 const F1315 = () => {
   const [assignMachineUser, setAssignMachineUser] = useState<
     AssignMachineUser[]
@@ -62,6 +70,10 @@ const F1315 = () => {
     string[]
   >([]);
   const [showStatusPanel, setShowStatusPanel] = useState(false);
+  const [productivityAnalysis, setProductivityAnalysis] = useState<
+    ProductivityAnalysis[]
+  >([]);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   // Obtener la fecha actual en formato YYYY-MM-DD (Colombia)
   const obtenerFechaActualColombia = () => {
@@ -208,6 +220,108 @@ const F1315 = () => {
     fetchStandards();
   }, []);
 
+  // Función para analizar la productividad
+  const analyzeProductivity = (registro: RegistroCard) => {
+    const analysis: ProductivityAnalysis[] = [];
+
+    registro.machines.forEach((machine) => {
+      const machineAnalysis: ProductivityAnalysis = {
+        machine: machine.machine,
+        issues: [],
+        recommendations: [],
+        efficiency: 0
+      };
+
+      // Calcular horas trabajadas
+      const horasTrabajadas =
+        parseFloat(machine.horometroFinal) -
+        parseFloat(machine.horometroInicial);
+
+      // Obtener el estándar de la máquina
+      const standard = standards[machine.machine];
+
+      if (standard) {
+        const standardEfficiency = parseFloat(standard.efficiency);
+        const horasAsignadas =
+          typeof machine.horasAsignadas === 'string'
+            ? parseFloat(machine.horasAsignadas)
+            : (machine.horasAsignadas as number);
+
+        // Calcular eficiencia
+        machineAnalysis.efficiency =
+          (horasTrabajadas / (standardEfficiency * horasAsignadas)) * 100;
+
+        // Detectar problemas basados en la eficiencia
+        if (machineAnalysis.efficiency < 70) {
+          machineAnalysis.issues.push(
+            `Baja eficiencia (${machineAnalysis.efficiency.toFixed(2)}%)`
+          );
+          machineAnalysis.recommendations.push('Revisar proceso de operación');
+          machineAnalysis.recommendations.push(
+            'Verificar estado de la máquina'
+          );
+          machineAnalysis.recommendations.push(
+            'Capacitar al operario en mejores prácticas'
+          );
+        }
+      }
+
+      // Analizar paradas mayores
+      const paradasMayores = parseFloat(machine.paradasMayores);
+      if (paradasMayores > 60) {
+        machineAnalysis.issues.push(
+          `Tiempo excesivo de paradas (${paradasMayores} minutos)`
+        );
+        machineAnalysis.recommendations.push(
+          'Programar mantenimiento preventivo'
+        );
+        machineAnalysis.recommendations.push(
+          'Revisar planificación de producción'
+        );
+      }
+
+      // Analizar observaciones para detectar problemas comunes
+      if (machine.observaciones) {
+        const obs = machine.observaciones.toLowerCase();
+
+        if (obs.includes('mantenimiento') || obs.includes('reparación')) {
+          machineAnalysis.issues.push('Problemas de mantenimiento reportados');
+          machineAnalysis.recommendations.push(
+            'Crear plan de mantenimiento preventivo'
+          );
+        }
+
+        if (obs.includes('lubricación') || obs.includes('aceite')) {
+          machineAnalysis.issues.push('Problemas de lubricación');
+          machineAnalysis.recommendations.push(
+            'Revisar sistema de lubricación'
+          );
+          machineAnalysis.recommendations.push(
+            'Establecer programa de lubricación'
+          );
+        }
+
+        if (
+          obs.includes('electric') ||
+          obs.includes('corriente') ||
+          obs.includes('voltaje')
+        ) {
+          machineAnalysis.issues.push('Problemas eléctricos');
+          machineAnalysis.recommendations.push('Revisar instalación eléctrica');
+          machineAnalysis.recommendations.push(
+            'Verificar estabilizadores de voltaje'
+          );
+        }
+      }
+
+      if (machineAnalysis.issues.length > 0) {
+        analysis.push(machineAnalysis);
+      }
+    });
+
+    return analysis;
+  };
+
   const handleSearch = (value: string) => {
     setOperatorCode(value);
     const found = assignMachineUser.find((entry) => entry.operator === value);
@@ -324,6 +438,15 @@ const F1315 = () => {
 
     try {
       await addDoc(collection(db, 'registro_horometros'), payload);
+
+      // Analizar productividad después de enviar
+      const analysis = analyzeProductivity(registro);
+      setProductivityAnalysis(analysis);
+
+      if (analysis.length > 0) {
+        setShowAnalysis(true);
+      }
+
       alert('Registro enviado correctamente ✅');
       setRegistros(registros.filter((r) => r.id !== registroId));
     } catch (error) {
@@ -417,6 +540,81 @@ const F1315 = () => {
           </div>
         )}
       </div>
+
+      {/* Panel de análisis de productividad */}
+      {showAnalysis && productivityAnalysis.length > 0 && (
+        <div className="w-full max-w-2xl mb-4 bg-yellow-800 p-4 border-white rounded-lg">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-semibold text-white">
+              Análisis de Productividad
+            </h3>
+            <button
+              onClick={() => setShowAnalysis(false)}
+              className="text-white text-lg"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {productivityAnalysis.map((analysis, index) => (
+              <div key={index} className="bg-yellow-100 p-3 rounded-lg">
+                <h4 className="font-semibold text-yellow-800 mb-2">
+                  Máquina: {analysis.machine}
+                  {analysis.efficiency > 0 && (
+                    <span className="ml-2 text-sm">
+                      (Eficiencia: {analysis.efficiency.toFixed(2)}%)
+                    </span>
+                  )}
+                </h4>
+
+                {analysis.issues.length > 0 && (
+                  <div className="mb-2">
+                    <h5 className="font-medium text-red-600">
+                      Problemas detectados:
+                    </h5>
+                    <ul className="list-disc list-inside text-red-700">
+                      {analysis.issues.map((issue, i) => (
+                        <li key={i}>{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {analysis.recommendations.length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-green-600">
+                      Recomendaciones:
+                    </h5>
+                    <ul className="list-disc list-inside text-green-700">
+                      {analysis.recommendations.map((rec, i) => (
+                        <li key={i}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 p-2 bg-yellow-200 rounded">
+            <h5 className="font-semibold text-yellow-800">
+              Estrategias generales para mejorar la productividad:
+            </h5>
+            <ul className="list-disc list-inside text-yellow-900 pl-4">
+              <li>Implementar mantenimiento preventivo programado</li>
+              <li>Capacitar operarios en técnicas de eficiencia</li>
+              <li>Establecer protocolos rápidos para resolver paradas</li>
+              <li>
+                Crear banco de repuestos críticos para reducir tiempos de espera
+              </li>
+              <li>
+                Implementar sistema de alertas tempranas para fallas recurrentes
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
 
       <div className="mb-4 w-full max-w-2xl">
         <div className="flex items-center justify-between">
@@ -546,9 +744,9 @@ const F1315 = () => {
                     <input
                       type="number"
                       required
-                      readOnly
                       min={3}
                       value={m.horometroInicial}
+                      // readOnly={!!m.horometroInicial} // 👉 será editable si está vacío
                       onChange={(e) => {
                         const value = e.target.value;
                         setRegistros((prev) =>
@@ -569,6 +767,7 @@ const F1315 = () => {
                       className="w-full border border-gray-300 rounded px-2 py-1"
                     />
                   </div>
+
                   <div>
                     <label className="block mb-1">Horómetro final</label>
                     <input
