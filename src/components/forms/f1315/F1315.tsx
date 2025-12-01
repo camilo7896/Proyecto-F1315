@@ -88,7 +88,6 @@ const EstadoRegistroGlobo = ({
 const MachineCard = ({
   machine,
   index,
-  registro,
   onUpdate,
   standards,
   referencias

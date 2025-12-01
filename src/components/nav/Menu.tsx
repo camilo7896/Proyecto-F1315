@@ -1,10 +1,11 @@
-import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut, type User } from 'firebase/auth'; // <- Añade 'User' aquí
 import appFirebase from '../../lib/credentialFirebase';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import optiondata from './data/optionMenu';
 import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import IconUser from '../../../public/user.png';
+
 interface UserSatate {
   user: string | null;
   photoURL: string | null;
@@ -22,23 +23,29 @@ const Menu: React.FC<{ openMenu: boolean }> = ({ openMenu }) => {
   });
 
   const navigate = useNavigate();
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (userLogued) => {
-      if (userLogued) {
-        const userRef = doc(db, 'users', userLogued.uid);
-        const userSnap = await getDoc(userRef);
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (userLogued: User | null) => {
+        // <- Agrega el tipo aquí
+        if (userLogued) {
+          const userRef = doc(db, 'users', userLogued.uid);
+          const userSnap = await getDoc(userRef);
 
-        const role = userSnap.exists() ? userSnap.data().role : null;
+          const role = userSnap.exists() ? userSnap.data().role : null;
 
-        setstate({
-          user: userLogued.displayName || userLogued.email || userLogued.uid,
-          photoURL: userLogued.photoURL || null,
-          role: role || null
-        });
-      } else {
-        setstate({ user: null, photoURL: null, role: null });
+          setstate({
+            user: userLogued.displayName || userLogued.email || userLogued.uid,
+            photoURL: userLogued.photoURL || null,
+            role: role || null
+          });
+        } else {
+          setstate({ user: null, photoURL: null, role: null });
+        }
       }
-    });
+    );
+
     return () => {
       unsubscribe();
     };

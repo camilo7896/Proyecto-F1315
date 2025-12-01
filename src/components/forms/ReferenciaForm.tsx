@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 import app from '../../lib/credentialFirebase';
-import { getStorage } from 'firebase/storage';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -37,7 +37,7 @@ const ReferenciaForm: React.FC = () => {
     if (!file) return;
 
     try {
-      // 👉 Subir archivo al Storage
+      // 👉 Subir archivo al Storage (SINTAXIS CORRECTA v9+)
       const storageRef = ref(storage, `csv-referencias/${file.name}`);
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
