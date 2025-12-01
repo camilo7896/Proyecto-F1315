@@ -55,7 +55,25 @@ interface EditValues {
 
 interface UserData {
   role: string;
-  // Agrega otros campos si es necesario
+}
+
+interface ExportRow {
+  Fecha: string;
+  Máquina: string;
+  'Código Operario': string;
+  'Nombre Operario': string;
+  'Horómetro Inicial': string;
+  'Horómetro Final': string;
+  Referencia: string;
+  'Paradas Mayores': string;
+  Observaciones: string;
+  'Horas Asignadas': string;
+  'Horas Trabajadas': string;
+  Estándar: string;
+  'Estandar en horas': string;
+  'Eficiencia (horas)': string;
+  Estado: string;
+  'ID Registro': string;
 }
 
 // Componente principal
@@ -72,7 +90,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
   });
   const [filtroOperario, setFiltroOperario] = useState<string>('');
   const [cargando, setCargando] = useState<boolean>(false);
-  const [userRole, setUserRole] = useState<string>(''); // Estado para el rol del usuario
+  const [userRole, setUserRole] = useState<string>('');
 
   // Estado para el modal de edición
   const [modalAbierto, setModalAbierto] = useState<boolean>(false);
@@ -82,7 +100,6 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
     campo: string;
   } | null>(null);
 
-  // Estado para editar valores
   const [editValues, setEditValues] = useState<EditValues>({
     horometroInicial: '',
     horometroFinal: '',
@@ -101,7 +118,6 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
         const user = auth.currentUser;
 
         if (user) {
-          // Implementación para obtener el rol del usuario
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data() as UserData;
@@ -150,7 +166,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
     setEdicionActual(null);
   };
 
-  // Actualizar un campo específico
+  // Actualizar un campo específico (sin guardar quien editó)
   const actualizarCampo = async (campo: string) => {
     if (!edicionActual) return;
 
@@ -166,8 +182,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
       // Si estamos editando la fecha, actualizamos el campo fecha del registro
       if (campo === 'fecha') {
         await updateDoc(registroRef, {
-          fecha: editValues.fecha,
-          updatedAt: new Date().toISOString()
+          fecha: editValues.fecha
         });
 
         // Actualizar el estado local
@@ -187,8 +202,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
         };
 
         await updateDoc(registroRef, {
-          machines: machinesActualizadas,
-          updatedAt: new Date().toISOString()
+          machines: machinesActualizadas
         });
 
         // Actualizar el estado local
@@ -256,13 +270,11 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
     fetchMachineStandards();
   }, []);
 
-  // Filtros y ordenamiento
-  const operarios = Array.from(new Set(registros.map((r) => r.operatorCode)));
-
-  const formatearFecha = (fechaISO: string) => {
+  // Formatear fecha
+  const formatearFecha = (fechaISO: string): string => {
     if (!fechaISO) return '';
     const fecha = new Date(fechaISO);
-    if (isNaN(fecha.getTime())) return fechaISO; // Si no es una fecha válida, devolver el valor original
+    if (isNaN(fecha.getTime())) return fechaISO;
 
     const dia = String(fecha.getDate()).padStart(2, '0');
     const mes = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -272,6 +284,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
     return `${dia}/${mes}/${anio} ${horas}:${minutos}`;
   };
 
+  // Filtros y ordenamiento ASCENDENTE
   const registrosFiltrados = registros
     .filter((reg) => {
       if (fechaFiltro) {
@@ -295,15 +308,6 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
     .filter((reg) =>
       filtroOperario ? reg.operatorCode === filtroOperario : true
     )
-    .sort((a, b) => {
-      const fechaA = a.timestamp || a.fecha;
-      const fechaB = b.timestamp || b.fecha;
-
-      const tA = new Date(fechaA).getTime();
-      const tB = new Date(fechaB).getTime();
-
-      return tB - tA;
-    })
     .filter((reg) => {
       if (mesFiltro) {
         try {
@@ -314,99 +318,294 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
         }
       }
       return true;
+    })
+    .sort((a, b) => {
+      const fechaA = a.timestamp || a.fecha;
+      const fechaB = b.timestamp || b.fecha;
+
+      const tA = new Date(fechaA).getTime();
+      const tB = new Date(fechaB).getTime();
+
+      // Orden ASCENDENTE (más antiguo primero)
+      return tA - tB;
     });
 
-  const mostrarHoras = (valor: string) => {
+  // Obtener opciones únicas para los filtros basados en los registros filtrados
+  const operariosUnicos = Array.from(
+    new Set(registrosFiltrados.map((r) => r.operatorCode))
+  ).sort();
+  const maquinasUnicas = Array.from(
+    new Set(
+      registrosFiltrados.flatMap((reg) => reg.machines.map((m) => m.machine))
+    )
+  ).sort();
+
+  const mostrarHoras = (valor: string): string => {
     const num = parseFloat(valor);
     return isNaN(num) ? '0.00' : num.toFixed(2);
   };
 
+  // Función para exportar a CSV
   const handleExportAllCSV = () => {
-    const headers = [
-      'Fecha',
-      'Máquina',
-      'Código Operario',
-      'Horómetro Inicial',
-      'Horómetro Final',
-      'Referencia',
-      'Paradas Mayores',
-      'Observaciones',
-      'Horas Asignadas',
-      'Horas Trabajadas',
-      'Estándar',
-      'Estandar en horas',
-      'Eficiencia (horas)',
-      'Estado'
-    ];
+    try {
+      const headers = [
+        'Fecha',
+        'Máquina',
+        'Código Operario',
+        'Nombre Operario',
+        'Horómetro Inicial',
+        'Horómetro Final',
+        'Referencia',
+        'Paradas Mayores',
+        'Observaciones',
+        'Horas Asignadas',
+        'Horas Trabajadas',
+        'Estándar',
+        'Estandar en horas',
+        'Eficiencia (horas)',
+        'Estado',
+        'ID Registro'
+      ];
 
-    const rows = registrosFiltrados.flatMap((reg) =>
-      reg.machines
-        .filter((m) => !maquinaFiltro || m.machine === maquinaFiltro)
-        .map((machine) => {
-          const horoFin = parseFloat(machine.horometroFinal) || 0;
-          const horoIni = parseFloat(machine.horometroInicial) || 0;
-          const totalHoras = horoFin - horoIni;
+      const rows: ExportRow[] = registrosFiltrados.flatMap((reg) =>
+        reg.machines
+          .filter((m) => !maquinaFiltro || m.machine === maquinaFiltro)
+          .map((machine): ExportRow => {
+            const horoFin = parseFloat(machine.horometroFinal) || 0;
+            const horoIni = parseFloat(machine.horometroInicial) || 0;
+            const totalHoras = horoFin - horoIni;
 
-          const standard = parseFloat(machineStandards[machine.machine] || '0');
-          const horasAsignadas = parseFloat(machine.horasAsignadas) || 0;
+            const standard = parseFloat(
+              machineStandards[machine.machine] || '0'
+            );
+            const horasAsignadas = parseFloat(machine.horasAsignadas) || 0;
 
-          const eficiencia = totalHoras - standard * horasAsignadas;
+            const eficiencia = totalHoras - standard * horasAsignadas;
 
-          return {
-            Fecha: formatearFecha(reg.fecha),
-            Máquina: machine.machine,
-            'Código Operario': reg.operatorCode,
-            'Horómetro Inicial': machine.horometroInicial || '0.00',
-            'Horómetro Final': machine.horometroFinal || '0.00',
-            Referencia: machine.reference || 'N/A',
-            'Paradas Mayores': machine.paradasMayores || '0.00',
-            Observaciones: machine.observaciones || '',
-            'Horas Asignadas': mostrarHoras(machine.horasAsignadas || '0'),
-            'Horas Trabajadas': totalHoras.toFixed(2),
-            Estándar: standard,
-            'Estandar en horas': (standard * horasAsignadas).toFixed(2),
-            'Eficiencia (horas)': eficiencia.toFixed(2),
-            Estado: reg.estado || 'Pendiente'
-          };
-        })
-    );
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) =>
-        headers
-          .map((header) => {
-            const value = row[header as keyof typeof row];
-            const isNumeric = [
-              'Horómetro Inicial',
-              'Horómetro Final',
-              'Paradas Mayores',
-              'Horas Asignadas',
-              'Horas Trabajadas',
-              'Estándar',
-              'Estandar en horas',
-              'Eficiencia (horas)'
-            ].includes(header);
-            if (isNumeric) {
-              return String(value);
-            }
-            return `"${String(value || '').replace(/"/g, '""')}"`;
+            return {
+              Fecha: formatearFecha(reg.fecha),
+              Máquina: machine.machine || 'N/A',
+              'Código Operario': reg.operatorCode || 'N/A',
+              'Nombre Operario': reg.operatorName || 'N/A',
+              'Horómetro Inicial': machine.horometroInicial || '0.00',
+              'Horómetro Final': machine.horometroFinal || '0.00',
+              Referencia: machine.reference || 'N/A',
+              'Paradas Mayores': machine.paradasMayores || '0.00',
+              Observaciones: machine.observaciones || '',
+              'Horas Asignadas': mostrarHoras(machine.horasAsignadas || '0'),
+              'Horas Trabajadas': totalHoras.toFixed(2),
+              Estándar: standard.toString(),
+              'Estandar en horas': (standard * horasAsignadas).toFixed(2),
+              'Eficiencia (horas)': eficiencia.toFixed(2),
+              Estado: reg.estado || 'Pendiente',
+              'ID Registro': reg.id || 'N/A'
+            };
           })
-          .join(',')
-      )
-    ].join('\n');
+      );
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute(
-      'download',
-      `eficiencia_picado_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Mejorar el formato CSV para evitar problemas con comas y saltos de línea
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row) =>
+          headers
+            .map((header) => {
+              const value = row[header as keyof ExportRow];
+              // Escapar comillas y saltos de línea
+              const escapedValue = String(value || '')
+                .replace(/"/g, '""')
+                .replace(/\n/g, ' ')
+                .replace(/\r/g, ' ');
+
+              // Siempre envolver en comillas para evitar problemas con comas
+              return `"${escapedValue}"`;
+            })
+            .join(',')
+        )
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], {
+        type: 'text/csv;charset=utf-8;'
+      });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute(
+        'download',
+        `eficiencia_picado_completo_${new Date().toISOString().slice(0, 10)}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert(`CSV exportado correctamente con ${rows.length} registros ✅`);
+    } catch (error) {
+      console.error('Error al exportar CSV:', error);
+      alert('Error al exportar el archivo CSV. Por favor, intente nuevamente.');
+    }
+  };
+
+  // Función para exportar a Excel
+  const handleExportAllExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+
+      const headers = [
+        'Fecha',
+        'Máquina',
+        'Código Operario',
+        'Nombre Operario',
+        'Horómetro Inicial',
+        'Horómetro Final',
+        'Referencia',
+        'Paradas Mayores',
+        'Observaciones',
+        'Horas Asignadas',
+        'Horas Trabajadas',
+        'Estándar',
+        'Estandar en horas',
+        'Eficiencia (horas)',
+        'Estado',
+        'ID Registro'
+      ];
+
+      const data = registrosFiltrados.flatMap((reg) =>
+        reg.machines
+          .filter((m) => !maquinaFiltro || m.machine === maquinaFiltro)
+          .map((machine) => {
+            const horoFin = parseFloat(machine.horometroFinal) || 0;
+            const horoIni = parseFloat(machine.horometroInicial) || 0;
+            const totalHoras = horoFin - horoIni;
+
+            const standard = parseFloat(
+              machineStandards[machine.machine] || '0'
+            );
+            const horasAsignadas = parseFloat(machine.horasAsignadas) || 0;
+
+            const eficiencia = totalHoras - standard * horasAsignadas;
+
+            return [
+              formatearFecha(reg.fecha),
+              machine.machine || 'N/A',
+              reg.operatorCode || 'N/A',
+              reg.operatorName || 'N/A',
+              parseFloat(machine.horometroInicial) || 0,
+              parseFloat(machine.horometroFinal) || 0,
+              machine.reference || 'N/A',
+              parseFloat(machine.paradasMayores) || 0,
+              machine.observaciones || '',
+              parseFloat(machine.horasAsignadas) || 0,
+              totalHoras,
+              standard,
+              standard * horasAsignadas,
+              eficiencia,
+              reg.estado || 'Pendiente',
+              reg.id || 'N/A'
+            ];
+          })
+      );
+
+      // Crear libro de trabajo y hoja
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+
+      // Ajustar el ancho de las columnas
+      const colWidths = [
+        { wch: 20 }, // Fecha
+        { wch: 15 }, // Máquina
+        { wch: 18 }, // Código Operario
+        { wch: 20 }, // Nombre Operario
+        { wch: 15 }, // H. Inicial
+        { wch: 15 }, // H. Final
+        { wch: 15 }, // Referencia
+        { wch: 15 }, // Paradas
+        { wch: 30 }, // Observaciones
+        { wch: 15 }, // H. Asignadas
+        { wch: 15 }, // H. Trabajadas
+        { wch: 12 }, // Estándar
+        { wch: 15 }, // Estandar horas
+        { wch: 15 }, // Eficiencia
+        { wch: 12 }, // Estado
+        { wch: 20 } // ID Registro
+      ];
+      ws['!cols'] = colWidths;
+
+      // Agregar la hoja al libro
+      XLSX.utils.book_append_sheet(wb, ws, 'Eficiencia Picado');
+
+      // Generar y descargar el archivo
+      XLSX.writeFile(
+        wb,
+        `eficiencia_picado_completo_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
+
+      alert(`Excel exportado correctamente con ${data.length} registros ✅`);
+    } catch (error) {
+      console.error('Error al exportar Excel:', error);
+      alert(
+        'Error al exportar el archivo Excel. Por favor, intente nuevamente.'
+      );
+    }
+  };
+
+  // Función para exportar resumen ejecutivo
+  const handleExportResumen = () => {
+    try {
+      const headers = ['Métrica', 'Valor', 'Unidad'];
+
+      const resumenData = [
+        ['Total Horas Asignadas', sumaHorasAsignadas.toFixed(2), 'horas'],
+        ['Total Horas Trabajadas', sumaHorasTrabajadas.toFixed(2), 'horas'],
+        ['Total Estandar en Horas', sumaEstandarHoras1.toFixed(2), 'horas'],
+        ['Eficiencia Total', eficienciaHoras.toFixed(2), 'horas'],
+        [
+          'Porcentaje de Eficiencia',
+          `${
+            sumaEstandarHoras1 > 0 && !isNaN(sumaHorasTrabajadas)
+              ? ((sumaHorasTrabajadas / sumaEstandarHoras1 - 1) * 100).toFixed(
+                  2
+                )
+              : '0.00'
+          }%`,
+          ''
+        ],
+        ['Total Registros', registrosFiltrados.length.toString(), ''],
+        [
+          'Total Ítems',
+          registrosFiltrados
+            .flatMap((reg) =>
+              reg.machines.filter(
+                (m) => !maquinaFiltro || m.machine === maquinaFiltro
+              )
+            )
+            .length.toString(),
+          ''
+        ]
+      ];
+
+      const csvContent = [
+        headers.join(','),
+        ...resumenData.map((row) => row.join(','))
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], {
+        type: 'text/csv;charset=utf-8;'
+      });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute(
+        'download',
+        `resumen_eficiencia_picado_${new Date().toISOString().slice(0, 10)}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      alert('Resumen exportado correctamente ✅');
+    } catch (error) {
+      console.error('Error al exportar resumen:', error);
+      alert('Error al exportar el resumen. Por favor, intente nuevamente.');
+    }
   };
 
   // Cálculos totales
@@ -463,27 +662,65 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
               Modo Edición ({userRole})
             </span>
           )}
-          <button
-            onClick={handleExportAllCSV}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow cursor-pointer flex items-center"
-          >
-            {/* Icono */}
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+          <div className="flex space-x-2">
+            <button
+              onClick={handleExportResumen}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow cursor-pointer flex items-center text-sm"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            Exportar CSV
-          </button>
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Resumen
+            </button>
+            <button
+              onClick={handleExportAllCSV}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow cursor-pointer flex items-center text-sm"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              CSV Completo
+            </button>
+            <button
+              onClick={handleExportAllExcel}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow cursor-pointer flex items-center text-sm"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Excel
+            </button>
+          </div>
         </div>
       </div>
 
@@ -515,11 +752,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Todas las máquinas</option>
-              {Array.from(
-                new Set(
-                  registros.flatMap((reg) => reg.machines.map((m) => m.machine))
-                )
-              ).map((m) => (
+              {maquinasUnicas.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
@@ -551,7 +784,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Todos los operarios</option>
-              {operarios.map((op) => (
+              {operariosUnicos.map((op) => (
                 <option key={op} value={op}>
                   {op}
                 </option>
