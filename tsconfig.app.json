@@ -6,10 +6,10 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-    
+    "resolveJsonModule": true,
+        
     /* Firebase necesita estas opciones */
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "allowSyntheticDefaultImports": true,
 
     /* Bundler mode */
