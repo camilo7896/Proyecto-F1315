@@ -1,5 +1,80 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react'; // Agregar estas importaciones
+
+// Componente para el turno actual
+const TurnoActual = () => {
+  const [turno, setTurno] = useState({ nombre: '', horario: '', periodo: '' });
+
+  useEffect(() => {
+    const calcularTurno = () => {
+      const ahora = new Date();
+      const horas = ahora.getHours();
+      const minutos = ahora.getMinutes();
+
+      // Convertir a minutos totales del día para facilitar comparación
+      const minutosActual = horas * 60 + minutos;
+
+      // Definir los turnos en minutos
+      const inicioManana = 6 * 60; // 06:00 = 360 minutos
+      const inicioTarde = 14 * 60 + 1; // 14:01 = 841 minutos
+      const inicioNoche = 22 * 60 + 1; // 22:01 = 1321 minutos
+
+      let nombre, horario, periodo;
+
+      if (minutosActual >= inicioManana && minutosActual < inicioTarde) {
+        // Turno Matutino: 06:00 - 14:00
+        nombre = 'Matutino';
+        horario = '06:00 - 14:00';
+        periodo = 'mañana';
+      } else if (minutosActual >= inicioTarde && minutosActual < inicioNoche) {
+        // Turno Vespertino: 14:01 - 22:00
+        nombre = 'Vespertino';
+        horario = '14:01 - 22:00';
+        periodo = 'tarde';
+      } else {
+        // Turno Nocturno: 22:01 - 05:59
+        nombre = 'Nocturno';
+        horario = '22:01 - 06:00';
+        periodo = 'noche';
+      }
+
+      setTurno({ nombre, horario, periodo });
+    };
+
+    // Calcular al montar
+    calcularTurno();
+
+    // Actualizar cada minuto
+    const intervalo = setInterval(calcularTurno, 60000);
+
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // Iconos para cada turno
+  const iconos = {
+    mañana: '🌅',
+    tarde: '🌤️',
+    noche: '🌙'
+  };
+
+  return (
+    <div className="px-6 py-3 bg-gray-800/50 rounded-lg border border-gray-700">
+      <div className="text-sm text-gray-400 flex items-center gap-2">
+        <span>{iconos[turno.periodo]}</span>
+        <span>Turno Actual</span>
+      </div>
+      <div className="text-xl font-bold">
+        {turno.nombre} • {turno.horario}
+      </div>
+      <div className="text-xs text-gray-500 mt-1">
+        {turno.periodo === 'mañana' && 'Buenos días'}
+        {turno.periodo === 'tarde' && 'Buenas tardes'}
+        {turno.periodo === 'noche' && 'Buenas noches'}
+      </div>
+    </div>
+  );
+};
 
 export default function HomePage() {
   const quickLinks = [
@@ -142,12 +217,8 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="hidden md:block">
-                <div className="px-6 py-3 bg-gray-800/50 rounded-lg border border-gray-700">
-                  <div className="text-sm text-gray-400">Turno Actual</div>
-                  <div className="text-xl font-bold">
-                    Matutino • 06:00 - 14:00
-                  </div>
-                </div>
+                {/* AQUÍ ESTÁ EL COMPONENTE DEL TURNO DINÁMICO */}
+                <TurnoActual />
               </div>
             </div>
           </motion.div>
