@@ -92,6 +92,11 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
   const [cargando, setCargando] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string>('');
 
+  // Nuevos estados para filtro por rango de fechas
+  const [fechaDesde, setFechaDesde] = useState<string>('');
+  const [fechaHasta, setFechaHasta] = useState<string>('');
+  const [usarRangoFechas, setUsarRangoFechas] = useState<boolean>(false);
+
   // Estado para el modal de edición
   const [modalAbierto, setModalAbierto] = useState<boolean>(false);
   const [edicionActual, setEdicionActual] = useState<{
@@ -223,6 +228,12 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
     }
   };
 
+  // Función para convertir fecha a timestamp para comparación
+  const convertirFechaATimestamp = (fechaStr: string): number => {
+    if (!fechaStr) return 0;
+    return new Date(fechaStr).getTime();
+  };
+
   // Carga datos
   useEffect(() => {
     const fetchData = async () => {
@@ -287,7 +298,24 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
   // Filtros y ordenamiento ASCENDENTE
   const registrosFiltrados = registros
     .filter((reg) => {
-      if (fechaFiltro) {
+      // Filtro por rango de fechas
+      if (usarRangoFechas && (fechaDesde || fechaHasta)) {
+        const fechaRegistro = convertirFechaATimestamp(reg.fecha);
+        const desde = convertirFechaATimestamp(fechaDesde);
+        const hasta = convertirFechaATimestamp(fechaHasta);
+
+        if (fechaDesde && fechaHasta) {
+          return fechaRegistro >= desde && fechaRegistro <= hasta;
+        } else if (fechaDesde) {
+          return fechaRegistro >= desde;
+        } else if (fechaHasta) {
+          return fechaRegistro <= hasta;
+        }
+        return true;
+      }
+
+      // Filtro por fecha específica (compatibilidad con filtro anterior)
+      if (!usarRangoFechas && fechaFiltro) {
         const fecha = new Date(reg.fecha);
         if (isNaN(fecha.getTime())) return false;
 
@@ -309,7 +337,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
       filtroOperario ? reg.operatorCode === filtroOperario : true
     )
     .filter((reg) => {
-      if (mesFiltro) {
+      if (mesFiltro && !usarRangoFechas) {
         try {
           const regMes = new Date(reg.fecha).toISOString().slice(0, 7);
           return regMes === mesFiltro;
@@ -343,6 +371,17 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
   const mostrarHoras = (valor: string): string => {
     const num = parseFloat(valor);
     return isNaN(num) ? '0.00' : num.toFixed(2);
+  };
+
+  // Función para limpiar todos los filtros
+  const limpiarFiltros = () => {
+    setFechaFiltro('');
+    setFechaDesde('');
+    setFechaHasta('');
+    setUsarRangoFechas(false);
+    setMaquinaFiltro('');
+    setMesFiltro(new Date().toISOString().slice(0, 7));
+    setFiltroOperario('');
   };
 
   // Función para exportar a CSV
@@ -650,22 +689,28 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
   }, 0);
 
   return (
-    <div className="p-6 w-full bg-white rounded-lg border border-gray-200 shadow-lg overflow-x-auto relative">
+    <div className="p-6 w-full bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-300 shadow-lg overflow-x-auto relative">
       {/* Encabezado y botones */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-semibold text-center text-gray-800">
-          Reporte de Eficiencia Picado
-        </h2>
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+            📊 Reporte de Eficiencia Picado
+          </h2>
+          <p className="text-gray-600 mt-1 text-sm">
+            Análisis detallado de productividad por operario y máquina
+          </p>
+        </div>
+
+        <div className="flex flex-col md:items-end gap-2">
           {puedeEditar() && (
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-              Modo Edición ({userRole})
+            <span className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">
+              ✏️ Modo Edición ({userRole})
             </span>
           )}
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={handleExportResumen}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow cursor-pointer flex items-center text-sm"
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-2.5 rounded-lg shadow cursor-pointer flex items-center text-sm font-medium transition-all duration-200"
             >
               <svg
                 className="w-4 h-4 mr-2"
@@ -680,11 +725,11 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
                   d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
-              Resumen
+              Resumen CSV
             </button>
             <button
               onClick={handleExportAllCSV}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow cursor-pointer flex items-center text-sm"
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2.5 rounded-lg shadow cursor-pointer flex items-center text-sm font-medium transition-all duration-200"
             >
               <svg
                 className="w-4 h-4 mr-2"
@@ -703,7 +748,7 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
             </button>
             <button
               onClick={handleExportAllExcel}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow cursor-pointer flex items-center text-sm"
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2.5 rounded-lg shadow cursor-pointer flex items-center text-sm font-medium transition-all duration-200"
             >
               <svg
                 className="w-4 h-4 mr-2"
@@ -725,33 +770,114 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
       </div>
 
       {/* Filtros */}
-      <div className="bg-blue-50 p-4 rounded-lg mb-6">
-        <h3 className="text-lg font-semibold text-blue-800 mb-3">Filtros</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Filtro por día */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filtrar por día:
-            </label>
-            <input
-              type="date"
-              value={fechaFiltro}
-              onChange={(e) => setFechaFiltro(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl mb-6 border border-blue-100 shadow-sm">
+        <div className="flex items-center mb-4">
+          <svg
+            className="w-5 h-5 text-blue-600 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
             />
+          </svg>
+          <h3 className="text-lg font-semibold text-gray-800">
+            Filtros Avanzados
+          </h3>
+        </div>
+
+        {/* Selector de tipo de filtro de fecha */}
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Tipo de filtro por fecha:
+          </label>
+          <div className="flex space-x-6">
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                checked={!usarRangoFechas}
+                onChange={() => setUsarRangoFechas(false)}
+                className="form-radio h-4 w-4 text-blue-600"
+              />
+              <span className="ml-2 text-sm text-gray-800 font-medium">
+                Día/Mes Específico
+              </span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                checked={usarRangoFechas}
+                onChange={() => setUsarRangoFechas(true)}
+                className="form-radio h-4 w-4 text-blue-600"
+              />
+              <span className="ml-2 text-sm text-gray-800 font-medium">
+                Rango de Fechas
+              </span>
+            </label>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Filtro por día (solo visible cuando no se usa rango) */}
+          {!usarRangoFechas && (
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-1">
+                Filtrar por día:
+              </label>
+              <input
+                type="date"
+                value={fechaFiltro}
+                onChange={(e) => setFechaFiltro(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-800 shadow-sm"
+              />
+            </div>
+          )}
+
+          {/* Filtro por rango de fechas (solo visible cuando se usa rango) */}
+          {usarRangoFechas && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-1">
+                  Desde:
+                </label>
+                <input
+                  type="datetime-local"
+                  value={fechaDesde}
+                  onChange={(e) => setFechaDesde(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-800 shadow-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-1">
+                  Hasta:
+                </label>
+                <input
+                  type="datetime-local"
+                  value={fechaHasta}
+                  onChange={(e) => setFechaHasta(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-800 shadow-sm"
+                />
+              </div>
+            </>
+          )}
 
           {/* Filtro por máquina */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
               Filtrar por máquina:
             </label>
             <select
               value={maquinaFiltro}
               onChange={(e) => setMaquinaFiltro(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-800 shadow-sm"
             >
-              <option value="">Todas las máquinas</option>
+              <option value="" className="text-gray-500">
+                Todas las máquinas
+              </option>
               {maquinasUnicas.map((m) => (
                 <option key={m} value={m}>
                   {m}
@@ -760,30 +886,34 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
             </select>
           </div>
 
-          {/* filtro mes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Filtrar por mes:
-            </label>
-            <input
-              type="month"
-              value={mesFiltro}
-              onChange={(e) => setMesFiltro(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {/* filtro mes (solo visible cuando no se usa rango) */}
+          {!usarRangoFechas && (
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-1">
+                Filtrar por mes:
+              </label>
+              <input
+                type="month"
+                value={mesFiltro}
+                onChange={(e) => setMesFiltro(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-800 shadow-sm"
+              />
+            </div>
+          )}
 
           {/* filtro operario */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
               Filtrar por operario:
             </label>
             <select
               value={filtroOperario}
               onChange={(e) => setFiltroOperario(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-800 shadow-sm"
             >
-              <option value="">Todos los operarios</option>
+              <option value="" className="text-gray-500">
+                Todos los operarios
+              </option>
               {operariosUnicos.map((op) => (
                 <option key={op} value={op}>
                   {op}
@@ -792,54 +922,155 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
             </select>
           </div>
         </div>
+
+        {/* Botón para limpiar filtros */}
+        <div className="mt-5 flex justify-end">
+          <button
+            onClick={limpiarFiltros}
+            className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-5 py-2.5 rounded-lg shadow cursor-pointer flex items-center text-sm font-medium transition-all duration-200"
+          >
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+            Limpiar Filtros
+          </button>
+        </div>
       </div>
 
       {/* Tarjetas de totales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
         {/* Total Horas Asignadas */}
-        <div className="bg-blue-100 p-4 rounded-lg shadow-sm border border-blue-200">
-          <p className="font-semibold text-blue-800 text-sm">
-            Total Horas Asignadas
-          </p>
-          <p className="text-2xl font-bold text-blue-600">
-            {sumaHorasAsignadas.toFixed(2)} horas
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
+          <div className="flex items-center mb-3">
+            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <p className="font-semibold text-blue-800">Horas Asignadas</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-800">
+            {sumaHorasAsignadas.toFixed(2)}
+            <span className="text-sm font-normal text-gray-600 ml-1">
+              horas
+            </span>
           </p>
         </div>
+
         {/* Total Horas Trabajadas */}
-        <div className="bg-green-100 p-4 rounded-lg shadow-sm border border-green-200">
-          <p className="font-semibold text-green-800 text-sm">
-            Total Horas Trabajadas
-          </p>
-          <p className="text-2xl font-bold text-green-600">
-            {sumaHorasTrabajadas.toFixed(2)} horas
+        <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl shadow-sm border border-green-200">
+          <div className="flex items-center mb-3">
+            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <p className="font-semibold text-green-800">Horas Trabajadas</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-800">
+            {sumaHorasTrabajadas.toFixed(2)}
+            <span className="text-sm font-normal text-gray-600 ml-1">
+              horas
+            </span>
           </p>
         </div>
+
         {/* Estandar en Horas */}
-        <div className="bg-purple-100 p-4 rounded-lg shadow-sm border border-purple-200">
-          <p className="font-semibold text-purple-800 text-sm">
-            Total Estandar en Horas
-          </p>
-          <p className="text-2xl font-bold text-purple-600">
-            {sumaEstandarHoras1.toFixed(2)} horas
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-xl shadow-sm border border-purple-200">
+          <div className="flex items-center mb-3">
+            <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-3">
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+            </div>
+            <p className="font-semibold text-purple-800">Estándar en Horas</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-800">
+            {sumaEstandarHoras1.toFixed(2)}
+            <span className="text-sm font-normal text-gray-600 ml-1">
+              horas
+            </span>
           </p>
         </div>
+
         {/* Eficiencia */}
         <div
-          className={`p-4 rounded-lg shadow-sm border ${
-            eficienciaHoras >= 0
-              ? 'bg-green-100 border-green-200'
-              : 'bg-red-100 border-red-200'
-          }`}
+          className={`bg-gradient-to-br p-5 rounded-xl shadow-sm border ${eficienciaHoras >= 0 ? 'from-green-50 to-green-100 border-green-200' : 'from-red-50 to-red-100 border-red-200'}`}
         >
-          <p className="font-semibold text-sm">Eficiencia Total</p>
+          <div className="flex items-center mb-3">
+            <div
+              className={`w-10 h-10 ${eficienciaHoras >= 0 ? 'bg-green-500' : 'bg-red-500'} rounded-lg flex items-center justify-center mr-3`}
+            >
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                />
+              </svg>
+            </div>
+            <p
+              className={`font-semibold ${eficienciaHoras >= 0 ? 'text-green-800' : 'text-red-800'}`}
+            >
+              Eficiencia Total
+            </p>
+          </div>
           <p
-            className={`text-2xl font-bold ${
-              eficienciaHoras >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}
+            className={`text-3xl font-bold ${eficienciaHoras >= 0 ? 'text-green-600' : 'text-red-600'}`}
           >
-            {eficienciaHoras.toFixed(2)} horas
+            {eficienciaHoras >= 0 ? '+' : ''}
+            {eficienciaHoras.toFixed(2)}
+            <span className="text-sm font-normal text-gray-600 ml-1">
+              horas
+            </span>
           </p>
-          <p className="text-sm mt-1">
+          <p className="text-sm mt-2 text-gray-700">
             <strong>
               Porcentaje:{' '}
               {sumaEstandarHoras1 > 0 && !isNaN(sumaHorasTrabajadas)
@@ -855,16 +1086,43 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
       </div>
 
       {/* Resumen */}
-      <p className="mb-4 text-sm text-gray-600 bg-gray-100 p-2 rounded-lg">
-        Total de registros: {registrosFiltrados.length} | Total de ítems:{' '}
-        {
-          registrosFiltrados.flatMap((reg) =>
-            reg.machines.filter(
-              (m) => !maquinaFiltro || m.machine === maquinaFiltro
-            )
-          ).length
-        }
-      </p>
+      <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center">
+            <span className="text-sm font-semibold text-gray-700">
+              Total registros:
+            </span>
+            <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-bold">
+              {registrosFiltrados.length}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm font-semibold text-gray-700">
+              Total ítems:
+            </span>
+            <span className="ml-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold">
+              {
+                registrosFiltrados.flatMap((reg) =>
+                  reg.machines.filter(
+                    (m) => !maquinaFiltro || m.machine === maquinaFiltro
+                  )
+                ).length
+              }
+            </span>
+          </div>
+          {usarRangoFechas && (fechaDesde || fechaHasta) && (
+            <div className="flex items-center">
+              <span className="text-sm font-semibold text-gray-700">
+                Rango:
+              </span>
+              <span className="ml-2 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">
+                {fechaDesde ? formatearFecha(fechaDesde) : 'Inicio'} →{' '}
+                {fechaHasta ? formatearFecha(fechaHasta) : 'Fin'}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Componente RaceOperator */}
       <RaceOperator
@@ -873,353 +1131,458 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
       />
 
       {/* Tabla */}
-      <div
-        className="overflow-x-auto w-full rounded-lg border border-gray-200 shadow-sm"
-        style={{ maxHeight: '70vh' }}
-      >
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          {/* Encabezado fijo */}
-          <thead className="bg-gray-50 sticky top-0 z-10">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Fecha
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Máquina
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Operario
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                H. Inicial
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                H. Final
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Referencia
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Paradas
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Obs.
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                H. Asignadas
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                H. Trabajadas
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estandar H.
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estandar
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Eficiencia
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Estado
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          {/* Cuerpo */}
-          <tbody className="bg-white divide-y divide-gray-200">
-            {registrosFiltrados.map((reg) => (
-              <>
-                {/* Encabezado del registro */}
-                <tr key={`header-${reg.id}`} className="bg-blue-50">
-                  <td
-                    className="px-4 py-3 font-medium text-blue-800"
-                    colSpan={14}
+      <div className="mt-8">
+        <div className="flex items-center mb-4">
+          <svg
+            className="w-5 h-5 text-gray-700 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+            />
+          </svg>
+          <h3 className="text-xl font-semibold text-gray-800">
+            Detalle de Registros
+          </h3>
+        </div>
+
+        <div
+          className="overflow-x-auto w-full rounded-xl border border-gray-300 shadow-sm bg-white"
+          style={{ maxHeight: '70vh' }}
+        >
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            {/* Encabezado fijo */}
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10">
+              <tr>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  📅 Fecha
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  🏭 Máquina
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  👤 Operario
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  🔰 H. Inicial
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  🏁 H. Final
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  📋 Referencia
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  ⏰ Paradas
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  📝 Obs.
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  ⏱️ H. Asignadas
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  📊 H. Trabajadas
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  📈 Estándar H.
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  🎯 Estándar
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  📉 Eficiencia
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-300">
+                  🏷️ Estado
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  ⚙️ Acciones
+                </th>
+              </tr>
+            </thead>
+
+            {/* Cuerpo */}
+            <tbody className="bg-white divide-y divide-gray-200">
+              {registrosFiltrados.map((reg) => (
+                <>
+                  {/* Encabezado del registro */}
+                  <tr
+                    key={`header-${reg.id}`}
+                    className="bg-gradient-to-r from-blue-50 to-indigo-50 border-t-2 border-blue-300"
                   >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        Registro: {formatearFecha(reg.fecha)} - Operario:{' '}
-                        {reg.operatorCode} - {reg.operatorName}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${
-                            reg.estado === 'Revisado'
-                              ? 'bg-green-100 text-green-800'
-                              : reg.estado === 'Rechazado'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {reg.estado || 'Pendiente'}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {puedeEditar() && (
-                      <button
-                        onClick={() =>
-                          abrirModalEdicion(
-                            reg.id,
-                            0,
-                            'fecha',
-                            {
-                              horasAsignadas: '',
-                              horometroFinal: '',
-                              horometroInicial: '',
-                              machine: '',
-                              reference: '',
-                              paradasMayores: '',
-                              observaciones: ''
-                            },
-                            reg.fecha
-                          )
-                        }
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                      >
-                        Editar Fecha
-                      </button>
-                    )}
-                  </td>
-                </tr>
-                {/* Filas de máquinas */}
-                {reg.machines
-                  .filter((m) => !maquinaFiltro || m.machine === maquinaFiltro)
-                  .map((machine, index) => {
-                    const horoFin = parseFloat(machine.horometroFinal);
-                    const horoIni = parseFloat(machine.horometroInicial);
-                    const totalHoras =
-                      isNaN(horoFin) || isNaN(horoIni) ? 0 : horoFin - horoIni;
-
-                    const standardStr =
-                      machineStandards[machine.machine] ?? '0';
-                    const standard = parseFloat(standardStr);
-                    const horasAsignadas = parseFloat(machine.horasAsignadas);
-
-                    let eficiencia = 0;
-                    if (
-                      !isNaN(totalHoras) &&
-                      !isNaN(standard) &&
-                      !isNaN(horasAsignadas)
-                    ) {
-                      eficiencia = totalHoras - standard * horasAsignadas;
-                    }
-
-                    let rowClass = '';
-                    if (eficiencia > 0) {
-                      rowClass = 'bg-green-50';
-                    } else if (eficiencia <= 0 && eficiencia > -1) {
-                      rowClass = 'bg-yellow-50';
-                    } else if (eficiencia <= -1 && eficiencia >= -100) {
-                      rowClass = 'bg-red-50';
-                    }
-
-                    return (
-                      <tr
-                        key={`${reg.id}-${index}`}
-                        className={`hover:bg-gray-50 ${rowClass}`}
-                      >
-                        {/* Fecha */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {formatearFecha(reg.fecha)}
-                        </td>
-                        {/* Máquina */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {machine.machine}
-                        </td>
-                        {/* Operario */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {reg.operatorCode}
-                        </td>
-                        {/* Horómetro inicial */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {parseFloat(machine.horometroInicial).toFixed(2)}
-                        </td>
-                        {/* Horómetro final */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {parseFloat(machine.horometroFinal).toFixed(2)}
-                        </td>
-                        {/* Referencia */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {machine.reference || 'N/A'}
-                        </td>
-                        {/* Paradas mayores */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {machine.paradasMayores || '0.00'}
-                        </td>
-                        {/* Observaciones */}
-                        <td className="px-4 py-3">
-                          <div
-                            className="max-w-xs truncate"
-                            title={machine.observaciones}
+                    <td
+                      className="px-5 py-3 font-semibold text-gray-800"
+                      colSpan={14}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center">
+                          <svg
+                            className="w-4 h-4 text-blue-600 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
-                            {machine.observaciones}
-                          </div>
-                        </td>
-                        {/* Horas asignadas */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {mostrarHoras(machine.horasAsignadas)}
-                        </td>
-                        {/* Horas trabajadas */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {totalHoras.toFixed(2)}
-                        </td>
-                        {/* Estándar en horas */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {machineStandards[machine.machine] &&
-                          parseFloat(machineStandards[machine.machine]) > 0
-                            ? (
-                                parseFloat(
-                                  machineStandards[machine.machine] || '0'
-                                ) * parseFloat(machine.horasAsignadas)
-                              ).toFixed(2)
-                            : 'N/A'}
-                        </td>
-                        {/* Estándar */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {machineStandards[machine.machine] ?? 'N/A'}
-                        </td>
-                        {/* Eficiencia */}
-                        <td className="px-4 py-3 whitespace-nowrap font-medium">
-                          <span
-                            className={
-                              eficiencia >= 0
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                            }
-                          >
-                            {eficiencia.toFixed(2)}
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          <span className="font-bold">
+                            {formatearFecha(reg.fecha)}
                           </span>
-                        </td>
-                        {/* Estado */}
-                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="mx-2 text-gray-500">•</span>
+                          <span className="text-gray-700">
+                            Operario: {reg.operatorCode} - {reg.operatorName}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
                           <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold ${
                               reg.estado === 'Revisado'
-                                ? 'bg-green-100 text-green-800'
+                                ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300'
                                 : reg.estado === 'Rechazado'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-gray-100 text-gray-800'
+                                  ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300'
+                                  : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300'
                             }`}
                           >
                             {reg.estado || 'Pendiente'}
                           </span>
-                        </td>
-                        {/* Acciones */}
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {puedeEditar() && (
-                            <div className="flex flex-col space-y-1">
-                              <button
-                                onClick={() =>
-                                  abrirModalEdicion(
-                                    reg.id,
-                                    index,
-                                    'horometroInicial',
-                                    machine,
-                                    reg.fecha
-                                  )
-                                }
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                              >
-                                Editar H. Inicial
-                              </button>
-                              <button
-                                onClick={() =>
-                                  abrirModalEdicion(
-                                    reg.id,
-                                    index,
-                                    'horometroFinal',
-                                    machine,
-                                    reg.fecha
-                                  )
-                                }
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                              >
-                                Editar H. Final
-                              </button>
-                              <button
-                                onClick={() =>
-                                  abrirModalEdicion(
-                                    reg.id,
-                                    index,
-                                    'horasAsignadas',
-                                    machine,
-                                    reg.fecha
-                                  )
-                                }
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                              >
-                                Editar H. Asignadas
-                              </button>
-                              <button
-                                onClick={() =>
-                                  abrirModalEdicion(
-                                    reg.id,
-                                    index,
-                                    'reference',
-                                    machine,
-                                    reg.fecha
-                                  )
-                                }
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                              >
-                                Editar Referencia
-                              </button>
-                              <button
-                                onClick={() =>
-                                  abrirModalEdicion(
-                                    reg.id,
-                                    index,
-                                    'paradasMayores',
-                                    machine,
-                                    reg.fecha
-                                  )
-                                }
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                              >
-                                Editar Paradas
-                              </button>
-                              <button
-                                onClick={() =>
-                                  abrirModalEdicion(
-                                    reg.id,
-                                    index,
-                                    'observaciones',
-                                    machine,
-                                    reg.fecha
-                                  )
-                                }
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                              >
-                                Editar Obs.
-                              </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      {puedeEditar() && (
+                        <button
+                          onClick={() =>
+                            abrirModalEdicion(
+                              reg.id,
+                              0,
+                              'fecha',
+                              {
+                                horasAsignadas: '',
+                                horometroFinal: '',
+                                horometroInicial: '',
+                                machine: '',
+                                reference: '',
+                                paradasMayores: '',
+                                observaciones: ''
+                              },
+                              reg.fecha
+                            )
+                          }
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition-all duration-200"
+                        >
+                          Editar Fecha
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+
+                  {/* Filas de máquinas */}
+                  {reg.machines
+                    .filter(
+                      (m) => !maquinaFiltro || m.machine === maquinaFiltro
+                    )
+                    .map((machine, index) => {
+                      const horoFin = parseFloat(machine.horometroFinal);
+                      const horoIni = parseFloat(machine.horometroInicial);
+                      const totalHoras =
+                        isNaN(horoFin) || isNaN(horoIni)
+                          ? 0
+                          : horoFin - horoIni;
+
+                      const standardStr =
+                        machineStandards[machine.machine] ?? '0';
+                      const standard = parseFloat(standardStr);
+                      const horasAsignadas = parseFloat(machine.horasAsignadas);
+
+                      let eficiencia = 0;
+                      if (
+                        !isNaN(totalHoras) &&
+                        !isNaN(standard) &&
+                        !isNaN(horasAsignadas)
+                      ) {
+                        eficiencia = totalHoras - standard * horasAsignadas;
+                      }
+
+                      let rowClass = '';
+                      if (eficiencia > 0) {
+                        rowClass =
+                          'bg-gradient-to-r from-green-50/50 to-emerald-50/50';
+                      } else if (eficiencia <= 0 && eficiencia > -1) {
+                        rowClass =
+                          'bg-gradient-to-r from-yellow-50/50 to-amber-50/50';
+                      } else if (eficiencia <= -1 && eficiencia >= -100) {
+                        rowClass =
+                          'bg-gradient-to-r from-red-50/50 to-rose-50/50';
+                      }
+
+                      return (
+                        <tr
+                          key={`${reg.id}-${index}`}
+                          className={`hover:bg-gray-50/80 ${rowClass} transition-colors duration-150`}
+                        >
+                          {/* Fecha */}
+                          <td className="px-5 py-3 whitespace-nowrap text-gray-700 font-medium border-r border-gray-100">
+                            {formatearFecha(reg.fecha)}
+                          </td>
+
+                          {/* Máquina */}
+                          <td className="px-5 py-3 whitespace-nowrap text-gray-800 font-medium border-r border-gray-100">
+                            <span className="px-2 py-1 bg-gray-100 rounded text-sm">
+                              {machine.machine}
+                            </span>
+                          </td>
+
+                          {/* Operario */}
+                          <td className="px-5 py-3 whitespace-nowrap text-gray-700 border-r border-gray-100">
+                            <span className="font-medium">
+                              {reg.operatorCode}
+                            </span>
+                          </td>
+
+                          {/* Horómetro inicial */}
+                          <td className="px-5 py-3 whitespace-nowrap text-gray-800 border-r border-gray-100">
+                            <span className="bg-blue-50 px-2 py-1 rounded border border-blue-100">
+                              {parseFloat(machine.horometroInicial).toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* Horómetro final */}
+                          <td className="px-5 py-3 whitespace-nowrap text-gray-800 border-r border-gray-100">
+                            <span className="bg-green-50 px-2 py-1 rounded border border-green-100">
+                              {parseFloat(machine.horometroFinal).toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* Referencia */}
+                          <td className="px-5 py-3 whitespace-nowrap text-gray-700 border-r border-gray-100">
+                            <span className="px-2 py-1 bg-purple-50 rounded text-sm border border-purple-100">
+                              {machine.reference || 'N/A'}
+                            </span>
+                          </td>
+
+                          {/* Paradas mayores */}
+                          <td className="px-5 py-3 whitespace-nowrap text-gray-700 border-r border-gray-100">
+                            <span className="px-2 py-1 bg-orange-50 rounded text-sm border border-orange-100">
+                              {machine.paradasMayores || '0.00'}
+                            </span>
+                          </td>
+
+                          {/* Observaciones */}
+                          <td className="px-5 py-3 border-r border-gray-100">
+                            <div
+                              className="max-w-xs truncate text-gray-700"
+                              title={machine.observaciones}
+                            >
+                              {machine.observaciones || '-'}
                             </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </>
-            ))}
-          </tbody>
-        </table>
+                          </td>
+
+                          {/* Horas asignadas */}
+                          <td className="px-5 py-3 whitespace-nowrap border-r border-gray-100">
+                            <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg font-semibold">
+                              {mostrarHoras(machine.horasAsignadas)}
+                            </span>
+                          </td>
+
+                          {/* Horas trabajadas */}
+                          <td className="px-5 py-3 whitespace-nowrap border-r border-gray-100">
+                            <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg font-semibold">
+                              {totalHoras.toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* Estándar en horas */}
+                          <td className="px-5 py-3 whitespace-nowrap border-r border-gray-100">
+                            <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded font-medium">
+                              {machineStandards[machine.machine] &&
+                              parseFloat(machineStandards[machine.machine]) > 0
+                                ? (
+                                    parseFloat(
+                                      machineStandards[machine.machine] || '0'
+                                    ) * parseFloat(machine.horasAsignadas)
+                                  ).toFixed(2)
+                                : 'N/A'}
+                            </span>
+                          </td>
+
+                          {/* Estándar */}
+                          <td className="px-5 py-3 whitespace-nowrap border-r border-gray-100">
+                            <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded font-medium">
+                              {machineStandards[machine.machine] ?? 'N/A'}
+                            </span>
+                          </td>
+
+                          {/* Eficiencia */}
+                          <td className="px-5 py-3 whitespace-nowrap border-r border-gray-100">
+                            <span
+                              className={`px-3 py-1.5 rounded-lg font-bold ${
+                                eficiencia >= 0
+                                  ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200'
+                                  : 'bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border border-red-200'
+                              }`}
+                            >
+                              {eficiencia >= 0 ? '+' : ''}
+                              {eficiencia.toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* Estado */}
+                          <td className="px-5 py-3 whitespace-nowrap border-r border-gray-100">
+                            <span
+                              className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                                reg.estado === 'Revisado'
+                                  ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800'
+                                  : reg.estado === 'Rechazado'
+                                    ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
+                                    : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
+                              }`}
+                            >
+                              {reg.estado || 'Pendiente'}
+                            </span>
+                          </td>
+
+                          {/* Acciones */}
+                          <td className="px-5 py-3">
+                            {puedeEditar() && (
+                              <div className="grid grid-cols-2 gap-1">
+                                <button
+                                  onClick={() =>
+                                    abrirModalEdicion(
+                                      reg.id,
+                                      index,
+                                      'horometroInicial',
+                                      machine,
+                                      reg.fecha
+                                    )
+                                  }
+                                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-2 py-1.5 rounded text-xs font-medium transition-all duration-200"
+                                >
+                                  H. Inicial
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    abrirModalEdicion(
+                                      reg.id,
+                                      index,
+                                      'horometroFinal',
+                                      machine,
+                                      reg.fecha
+                                    )
+                                  }
+                                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-2 py-1.5 rounded text-xs font-medium transition-all duration-200"
+                                >
+                                  H. Final
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    abrirModalEdicion(
+                                      reg.id,
+                                      index,
+                                      'horasAsignadas',
+                                      machine,
+                                      reg.fecha
+                                    )
+                                  }
+                                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-2 py-1.5 rounded text-xs font-medium transition-all duration-200"
+                                >
+                                  H. Asignadas
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    abrirModalEdicion(
+                                      reg.id,
+                                      index,
+                                      'reference',
+                                      machine,
+                                      reg.fecha
+                                    )
+                                  }
+                                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-2 py-1.5 rounded text-xs font-medium transition-all duration-200"
+                                >
+                                  Referencia
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    abrirModalEdicion(
+                                      reg.id,
+                                      index,
+                                      'paradasMayores',
+                                      machine,
+                                      reg.fecha
+                                    )
+                                  }
+                                  className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-2 py-1.5 rounded text-xs font-medium transition-all duration-200"
+                                >
+                                  Paradas
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    abrirModalEdicion(
+                                      reg.id,
+                                      index,
+                                      'observaciones',
+                                      machine,
+                                      reg.fecha
+                                    )
+                                  }
+                                  className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-2 py-1.5 rounded text-xs font-medium transition-all duration-200"
+                                >
+                                  Obs.
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal de edición */}
       {modalAbierto && edicionActual && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 className="text-xl font-semibold mb-4">
-              Editar{' '}
-              {edicionActual.campo === 'fecha' ? 'Fecha' : edicionActual.campo}
-            </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-7 rounded-2xl shadow-2xl w-full max-w-md border border-gray-300">
+            <div className="flex items-center mb-5">
+              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                <svg
+                  className="w-5 h-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800">
+                Editar{' '}
+                {edicionActual.campo === 'fecha'
+                  ? 'Fecha'
+                  : edicionActual.campo}
+              </h3>
+            </div>
 
             {edicionActual.campo === 'fecha' ? (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-800 mb-2">
                   Nueva fecha:
                 </label>
                 <input
@@ -1235,13 +1598,14 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
                       fecha: e.target.value
                     }))
                   }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 text-gray-800"
                 />
               </div>
             ) : (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nuevo valor para {edicionActual.campo}:
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-800 mb-2">
+                  Nuevo valor para{' '}
+                  <span className="font-bold">{edicionActual.campo}</span>:
                 </label>
                 {edicionActual.campo === 'observaciones' ? (
                   <textarea
@@ -1256,8 +1620,9 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
                         [edicionActual.campo]: e.target.value
                       }))
                     }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 text-gray-800"
+                    rows={4}
+                    placeholder="Ingrese las observaciones..."
                   />
                 ) : (
                   <input
@@ -1283,25 +1648,26 @@ const EficencePicado: React.FC<EficencePicadoProps> = () => {
                         [edicionActual.campo]: e.target.value
                       }))
                     }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 text-gray-800"
+                    placeholder={`Ingrese el valor para ${edicionActual.campo}`}
                   />
                 )}
               </div>
             )}
 
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
               <button
                 onClick={cerrarModal}
-                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+                className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all duration-200"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => actualizarCampo(edicionActual.campo)}
                 disabled={cargando}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2.5 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
-                {cargando ? 'Actualizando...' : 'Actualizar'}
+                {cargando ? '⏳ Actualizando...' : '💾 Actualizar'}
               </button>
             </div>
           </div>

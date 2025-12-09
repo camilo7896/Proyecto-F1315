@@ -1,0 +1,535 @@
+// Login.scss - Diseño Industrial Minimalista
+.login-container {
+  width: 100%;
+  min-height: 100vh;
+  background: #0c1117;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  color: #e0e0e0;
+}
+
+// Fondo industrial minimalista
+.industrial-background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.industrial-grid {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 100, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 100, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  transition: transform 0.1s ease-out;
+}
+
+.industrial-elements {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.element {
+  position: absolute;
+  background: rgba(0, 100, 255, 0.05);
+  border: 1px solid rgba(0, 100, 255, 0.1);
+  
+  &.element-1 {
+    width: 120px;
+    height: 3px;
+    top: 20%;
+    left: 10%;
+    transform: rotate(45deg);
+  }
+  
+  &.element-2 {
+    width: 80px;
+    height: 3px;
+    bottom: 30%;
+    right: 15%;
+    transform: rotate(-30deg);
+  }
+  
+  &.element-3 {
+    width: 2px;
+    height: 100px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+// Tarjeta de login
+.login-card {
+  background: rgba(20, 25, 35, 0.9);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  padding: 50px;
+  width: 100%;
+  max-width: 480px;
+  border: 1px solid rgba(0, 100, 255, 0.15);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 20;
+}
+
+.login-header {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.logo-container {
+  margin-bottom: 20px;
+}
+
+.industrial-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  color: #00a8ff;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.logo-text {
+  font-size: 36px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #00a8ff 0%, #0097e6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 1px;
+}
+
+.logo-subtitle {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.system-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: rgba(0, 168, 255, 0.1);
+  border: 1px solid rgba(0, 168, 255, 0.2);
+  border-radius: 20px;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  
+  &.active {
+    background: #00ff88;
+    box-shadow: 0 0 15px #00ff88;
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+// Instrucciones
+.login-instructions {
+  text-align: center;
+  margin-bottom: 40px;
+  padding: 30px;
+  background: rgba(10, 15, 25, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 100, 255, 0.1);
+}
+
+.instruction-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 20px;
+  color: #00a8ff;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.instruction-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+.instruction-text {
+  font-size: 14px;
+  color: #94a3b8;
+  line-height: 1.6;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+// Acción principal de login
+.login-main-action {
+  margin-bottom: 30px;
+}
+
+.microsoft-login-button {
+  width: 100%;
+  padding: 20px;
+  background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 15px 30px rgba(0, 120, 212, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.microsoft-logo {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.button-text {
+  flex: 1;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.button-main-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+.button-subtext {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.button-arrow {
+  width: 20px;
+  height: 20px;
+  color: white;
+  opacity: 0.8;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin-top: 20px;
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.3);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ff3b30;
+}
+
+.error-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+// Información de seguridad
+.security-info {
+  margin: 30px 0;
+  padding: 20px 0;
+  border-top: 1px solid rgba(0, 100, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 100, 255, 0.1);
+}
+
+.security-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+    color: #00ff88;
+  }
+  
+  span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Enlaces de soporte
+.support-links {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.support-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  padding: 8px 16px;
+  border-radius: 6px;
+  
+  &:hover {
+    color: #00a8ff;
+    background: rgba(0, 168, 255, 0.1);
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// Información de versión
+.version-info {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.version-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: rgba(20, 25, 35, 0.8);
+  border: 1px solid rgba(0, 100, 255, 0.2);
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+}
+
+.version-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  
+  &.active {
+    background: #00ff88;
+    box-shadow: 0 0 15px #00ff88;
+    animation: pulse 2s infinite;
+  }
+}
+
+.version-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+// Responsive
+@media (max-width: 640px) {
+  .login-container {
+    padding: 20px;
+  }
+  
+  .login-card {
+    padding: 30px 24px;
+    max-width: 100%;
+  }
+  
+  .logo-text {
+    font-size: 28px;
+  }
+  
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .instruction-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .instruction-title {
+    font-size: 16px;
+  }
+  
+  .instruction-text {
+    font-size: 13px;
+  }
+  
+  .button-content {
+    gap: 15px;
+  }
+  
+  .microsoft-logo {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .button-main-text {
+    font-size: 15px;
+  }
+  
+  .button-subtext {
+    font-size: 11px;
+  }
+  
+  .support-links {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  .version-info {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px 20px;
+  }
+  
+  .logo-text {
+    font-size: 24px;
+  }
+  
+  .logo-subtitle {
+    font-size: 11px;
+  }
+  
+  .login-instructions {
+    padding: 20px;
+  }
+  
+  .instruction-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .microsoft-login-button {
+    padding: 16px;
+  }
+  
+  .button-content {
+    gap: 12px;
+  }
+  
+  .microsoft-logo {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .button-main-text {
+    font-size: 14px;
+  }
+  
+  .version-badge {
+    padding: 6px 12px;
+  }
+  
+  .version-text {
+    font-size: 10px;
+  }
+}

@@ -108,7 +108,7 @@ const Menu: React.FC<{ openMenu: boolean }> = ({ openMenu }) => {
         <div className="flex justify-center items-center pb-5">
           <button
             onClick={handleLogout}
-            className="bg-red-600 w-full rounded-2xl mx-5 hover:bg-white/8 cursor-pointer"
+            className="bg-red-600 w-full rounded-md mx-5 hover:bg-red-400 cursor-pointer h-10"
           >
             Salir
           </button>
