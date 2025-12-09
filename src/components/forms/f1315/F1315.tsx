@@ -38,7 +38,7 @@ type MachineData = {
   paradasMayores: string;
   reference: string;
   standard?: MachineStandard;
-  horasTrabajadas?: number; // ✅ Nuevo campo para horas trabajadas
+  horasTrabajadas?: number;
 };
 
 type RegistroCard = {
@@ -47,13 +47,6 @@ type RegistroCard = {
   operatorCode: string;
   machines: MachineData[];
   paradasMayores: string;
-};
-
-type ProductivityAnalysis = {
-  machine: string;
-  issues: string[];
-  recommendations: string[];
-  efficiency: number;
 };
 
 type Referencia = {
@@ -73,7 +66,7 @@ const EstadoRegistroGlobo = ({
 
   return (
     <div
-      className={`w-3 h-3 rounded-full ${
+      className={`w-4 h-4 rounded-full border-2 border-white shadow-sm ${
         haRegistrado ? 'bg-green-500' : 'bg-red-500'
       }`}
       title={
@@ -117,90 +110,127 @@ const MachineCard = ({
 
   return (
     <div
-      className={`border-2 p-3 mb-3 rounded-lg transition-all duration-300 ${
+      className={`border-2 p-4 mb-4 rounded-xl transition-all duration-300 shadow-lg ${
         isFocused
-          ? 'border-blue-500 bg-blue-50 shadow-lg'
-          : 'border-amber-400 bg-amber-50'
+          ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-white ring-4 ring-blue-100'
+          : 'border-blue-300 bg-gradient-to-br from-white to-blue-50'
       }`}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
     >
       {/* HEADER MEJORADO DE MÁQUINA */}
-      <div className="flex items-center justify-between mb-3 p-2 bg-white rounded border">
+      <div className="flex items-center justify-between mb-4 p-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl shadow">
         <div className="flex items-center">
-          <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold mr-2">
+          <div className="w-10 h-10 bg-white text-blue-700 rounded-full flex items-center justify-center font-bold mr-3 shadow-md">
             {index + 1}
           </div>
-          <h4 className="font-bold text-lg text-blue-900">{machine.machine}</h4>
+          <div>
+            <h4 className="font-bold text-xl">{machine.machine}</h4>
+            <p className="text-blue-100 text-sm">Máquina {index + 1}</p>
+          </div>
         </div>
-        <div className="text-sm bg-yellow-100 px-2 py-1 rounded border">
-          <span className="font-semibold">Máquina {index + 1}</span>
+        <div className="text-sm bg-blue-800/50 px-3 py-1.5 rounded-lg border border-blue-400">
+          <span className="font-semibold">📋 Formulario</span>
         </div>
       </div>
 
       {/* INDICADOR VISUAL DE ENFOQUE */}
       {isFocused && (
-        <div className="mb-2 p-2 bg-blue-100 border border-blue-300 rounded text-sm text-blue-700">
-          📍 Estás ingresando datos para: <strong>{machine.machine}</strong>
+        <div className="mb-3 p-3 bg-gradient-to-r from-blue-100 to-blue-50 border-l-4 border-blue-500 rounded-lg">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-2">
+              <span className="text-white text-sm">📍</span>
+            </div>
+            <p className="text-sm font-medium text-blue-800">
+              Estás ingresando datos para:{' '}
+              <strong className="text-blue-900">{machine.machine}</strong>
+            </p>
+          </div>
         </div>
       )}
 
       {/* CONTENIDO DE LA MÁQUINA */}
       {standards[machine.machine] && (
-        <div className="mb-3 p-3 bg-gray-100 border rounded text-sm">
-          <div className="grid grid-cols-2 gap-2">
-            <p>
-              <strong>Abreviatura:</strong>{' '}
-              {standards[machine.machine].abbreviation}
-            </p>
-            <p>
-              <strong>Estándar:</strong> {standards[machine.machine].efficiency}
-            </p>
+        <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white p-2 rounded-lg border">
+              <p className="text-xs text-gray-500 font-medium">Abreviatura</p>
+              <p className="font-bold text-gray-800">
+                {standards[machine.machine].abbreviation}
+              </p>
+            </div>
+            <div className="bg-white p-2 rounded-lg border">
+              <p className="text-xs text-gray-500 font-medium">
+                Estándar de Eficiencia
+              </p>
+              <p className="font-bold text-gray-800">
+                {standards[machine.machine].efficiency}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {/* ✅ PANEL DE HORAS TRABAJADAS */}
       <div
-        className={`mb-3 p-3 rounded border ${
+        className={`mb-4 p-4 rounded-xl border-2 shadow-sm ${
           excedeLimite
-            ? 'bg-red-100 border-red-300'
+            ? 'bg-gradient-to-r from-red-50 to-red-100 border-red-300'
             : horasTrabajadas > 0
-              ? 'bg-green-100 border-green-300'
-              : 'bg-gray-100 border-gray-300'
+              ? 'bg-gradient-to-r from-green-50 to-green-100 border-green-300'
+              : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-300'
         }`}
       >
         <div className="flex justify-between items-center">
-          <div>
-            <h5 className="font-semibold text-gray-700">📊 Horas Trabajadas</h5>
-            <p
-              className={`text-lg font-bold ${
-                excedeLimite ? 'text-red-600' : 'text-green-600'
+          <div className="flex items-center">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                excedeLimite ? 'bg-red-100' : 'bg-green-100'
               }`}
             >
-              {horasTrabajadas.toFixed(2)} horas
-            </p>
+              <span
+                className={`text-xl ${excedeLimite ? 'text-red-600' : 'text-green-600'}`}
+              >
+                📊
+              </span>
+            </div>
+            <div>
+              <h5 className="font-semibold text-gray-800">Horas Trabajadas</h5>
+              <p
+                className={`text-2xl font-bold ${
+                  excedeLimite ? 'text-red-600' : 'text-green-600'
+                }`}
+              >
+                {horasTrabajadas.toFixed(2)} horas
+              </p>
+            </div>
           </div>
           {excedeLimite && (
-            <div className="text-red-600 text-sm font-semibold">
-              ⚠️ Máximo 16 horas
+            <div className="flex items-center bg-red-600 text-white px-3 py-1.5 rounded-lg">
+              <span className="mr-1">⚠️</span>
+              <span className="font-semibold text-sm">Máximo 16 horas</span>
             </div>
           )}
         </div>
-        <div className="text-xs text-gray-600 mt-1">
-          Cálculo: {machine.horometroFinal || '0'} -{' '}
+        <div className="text-xs text-gray-600 mt-2 p-2 bg-white/50 rounded">
+          <strong>Cálculo:</strong> {machine.horometroFinal || '0'} -{' '}
           {machine.horometroInicial || '0'} = {horasTrabajadas.toFixed(2)} horas
         </div>
       </div>
 
       {/* FORMULARIO CON MEJOR VISUALIZACIÓN */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* GRUPO DE HORÓMETROS */}
-        <div className="space-y-2">
-          <div className="bg-gray-100 p-2 rounded border">
-            <label className="block mb-1 font-semibold text-gray-700">
-              ⏱️ Horas asignadas
-            </label>
+        <div className="space-y-3">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 shadow-sm">
+            <div className="flex items-center mb-2">
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-2">
+                <span className="text-white">⏱️</span>
+              </div>
+              <label className="block font-semibold text-gray-800 text-lg">
+                Horas asignadas
+              </label>
+            </div>
             <input
               type="number"
               min={0}
@@ -210,15 +240,23 @@ const MachineCard = ({
               onChange={(e) =>
                 onUpdate(index, 'horasAsignadas', e.target.value)
               }
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 text-lg bg-white shadow-sm"
               placeholder="Ej: 8"
             />
+            <p className="text-xs text-gray-600 mt-1 ml-10">
+              Máximo permitido: 16 horas
+            </p>
           </div>
 
-          <div className="bg-green-50 p-2 rounded border border-green-200">
-            <label className="block mb-1 font-semibold text-gray-700">
-              🔰 Horómetro inicial
-            </label>
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200 shadow-sm">
+            <div className="flex items-center mb-2">
+              <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mr-2">
+                <span className="text-white">🔰</span>
+              </div>
+              <label className="block font-semibold text-gray-800 text-lg">
+                Horómetro inicial
+              </label>
+            </div>
             <input
               type="number"
               required
@@ -228,15 +266,23 @@ const MachineCard = ({
               onChange={(e) =>
                 onUpdate(index, 'horometroInicial', e.target.value)
               }
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-800 text-lg bg-white shadow-sm"
               placeholder="Horómetro actual"
             />
+            <p className="text-xs text-gray-600 mt-1 ml-10">
+              Valor actual de la máquina
+            </p>
           </div>
 
-          <div className="bg-red-50 p-2 rounded border border-red-200">
-            <label className="block mb-1 font-semibold text-gray-700">
-              🏁 Horómetro final
-            </label>
+          <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl border border-red-200 shadow-sm">
+            <div className="flex items-center mb-2">
+              <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center mr-2">
+                <span className="text-white">🏁</span>
+              </div>
+              <label className="block font-semibold text-gray-800 text-lg">
+                Horómetro final
+              </label>
+            </div>
             <input
               type="number"
               required
@@ -246,22 +292,34 @@ const MachineCard = ({
               onChange={(e) =>
                 onUpdate(index, 'horometroFinal', e.target.value)
               }
-              className={`w-full border rounded px-3 py-2 focus:ring-2 focus:border-blue-500 ${
+              className={`w-full border-2 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:border-blue-500 text-gray-800 text-lg shadow-sm ${
                 excedeLimite
                   ? 'border-red-500 focus:ring-red-500 bg-red-50'
-                  : 'border-gray-300 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-red-500 bg-white'
               }`}
               placeholder="Debe ser mayor al inicial"
             />
+            <p
+              className={`text-xs mt-1 ml-10 ${excedeLimite ? 'text-red-600 font-semibold' : 'text-gray-600'}`}
+            >
+              {excedeLimite
+                ? '⚠️ Verificar horas trabajadas'
+                : 'Valor al finalizar el turno'}
+            </p>
           </div>
         </div>
 
         {/* GRUPO DE INFORMACIÓN ADICIONAL */}
-        <div className="space-y-2">
-          <div className="bg-orange-50 p-2 rounded border border-orange-200">
-            <label className="block mb-1 font-semibold text-gray-700">
-              ⏰ Paradas mayores (minutos)
-            </label>
+        <div className="space-y-3">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border border-orange-200 shadow-sm">
+            <div className="flex items-center mb-2">
+              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mr-2">
+                <span className="text-white">⏰</span>
+              </div>
+              <label className="block font-semibold text-gray-800 text-lg">
+                Paradas mayores (minutos)
+              </label>
+            </div>
             <input
               type="number"
               required
@@ -270,20 +328,28 @@ const MachineCard = ({
               onChange={(e) =>
                 onUpdate(index, 'paradasMayores', e.target.value)
               }
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-800 text-lg bg-white shadow-sm"
               placeholder="Ej: 30"
             />
+            <p className="text-xs text-gray-600 mt-1 ml-10">
+              Tiempo total de paradas en minutos
+            </p>
           </div>
 
-          <div className="bg-purple-50 p-2 rounded border border-purple-200">
-            <label className="block mb-1 font-semibold text-gray-700">
-              📋 Referencia
-            </label>
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200 shadow-sm">
+            <div className="flex items-center mb-2">
+              <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mr-2">
+                <span className="text-white">📋</span>
+              </div>
+              <label className="block font-semibold text-gray-800 text-lg">
+                Referencia
+              </label>
+            </div>
             <select
               value={machine.reference}
               required
               onChange={(e) => onUpdate(index, 'reference', e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-800 text-lg bg-white shadow-sm appearance-none"
             >
               <option value="">Selecciona una referencia</option>
               {referencias
@@ -295,44 +361,81 @@ const MachineCard = ({
                   </option>
                 ))}
             </select>
+            <p className="text-xs text-gray-600 mt-1 ml-10">
+              Selecciona la referencia trabajada
+            </p>
           </div>
 
-          <div className="bg-blue-50 p-2 rounded border border-blue-200">
-            <label className="block mb-1 font-semibold text-gray-700">
-              📝 Observaciones
-            </label>
+          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 p-4 rounded-xl border border-cyan-200 shadow-sm">
+            <div className="flex items-center mb-2">
+              <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center mr-2">
+                <span className="text-white">📝</span>
+              </div>
+              <label className="block font-semibold text-gray-800 text-lg">
+                Observaciones
+              </label>
+            </div>
             <textarea
               value={machine.observaciones}
               onChange={(e) => onUpdate(index, 'observaciones', e.target.value)}
-              rows={3}
-              className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={4}
+              className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-gray-800 text-lg bg-white shadow-sm resize-none"
               placeholder="Ingresa observaciones relevantes..."
             />
+            <p className="text-xs text-gray-600 mt-1 ml-10">
+              Notas importantes sobre la máquina
+            </p>
           </div>
         </div>
       </div>
 
       {/* VALIDACIÓN EN TIEMPO REAL */}
-      <div className="mt-2 space-y-1">
+      <div className="mt-4 space-y-2">
         {machine.horometroFinal &&
           machine.horometroInicial &&
           Number(machine.horometroFinal) < Number(machine.horometroInicial) && (
-            <div className="p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
-              ⚠️ El horómetro final no puede ser menor que el inicial
+            <div className="p-3 bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 rounded-lg flex items-center">
+              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                <span className="text-white">⚠️</span>
+              </div>
+              <div>
+                <p className="font-semibold text-red-700">
+                  Error de validación
+                </p>
+                <p className="text-red-600 text-sm">
+                  El horómetro final no puede ser menor que el inicial
+                </p>
+              </div>
             </div>
           )}
 
         {excedeLimite && (
-          <div className="p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
-            ❌ Las horas trabajadas no pueden exceder 16 horas.
-            <strong> Actual: {horasTrabajadas.toFixed(2)} horas</strong>
+          <div className="p-3 bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 rounded-lg flex items-center">
+            <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center mr-3">
+              <span className="text-white">❌</span>
+            </div>
+            <div>
+              <p className="font-semibold text-red-700">Límite excedido</p>
+              <p className="text-red-600 text-sm">
+                Las horas trabajadas no pueden exceder 16 horas.
+                <strong> Actual: {horasTrabajadas.toFixed(2)} horas</strong>
+              </p>
+            </div>
           </div>
         )}
 
         {horasTrabajadas > 0 && !excedeLimite && (
-          <div className="p-2 bg-green-100 border border-green-300 rounded text-green-700 text-sm">
-            ✅ Horas trabajadas válidas:{' '}
-            <strong>{horasTrabajadas.toFixed(2)} horas</strong>
+          <div className="p-3 bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg flex items-center">
+            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mr-3">
+              <span className="text-white">✅</span>
+            </div>
+            <div>
+              <p className="font-semibold text-green-700">Horas válidas</p>
+              <p className="text-green-600 text-sm">
+                Horas trabajadas válidas:{' '}
+                <strong>{horasTrabajadas.toFixed(2)} horas</strong>
+              </p>
+            </div>
           </div>
         )}
       </div>
@@ -355,10 +458,6 @@ const F1315 = () => {
     string[]
   >([]);
   const [showStatusPanel, setShowStatusPanel] = useState<boolean>(false);
-  const [productivityAnalysis, setProductivityAnalysis] = useState<
-    ProductivityAnalysis[]
-  >([]);
-  const [showAnalysis, setShowAnalysis] = useState<boolean>(false);
   const [registrosEnProceso, setRegistrosEnProceso] = useState<Set<string>>(
     new Set()
   );
@@ -369,6 +468,7 @@ const F1315 = () => {
   );
   const [registros, setRegistros] = useState<RegistroCard[]>([]);
   const [referencias, setReferencias] = useState<Referencia[]>([]);
+  const [isFormFullscreen, setIsFormFullscreen] = useState(false);
 
   // Obtener la fecha actual en formato YYYY-MM-DD (Colombia)
   const obtenerFechaActualColombia = (): string => {
@@ -388,7 +488,6 @@ const F1315 = () => {
   useEffect(() => {
     const fechaHoy = obtenerFechaActualColombia();
 
-    // Consulta para obtener registros del día actual
     const q = query(
       collection(db, 'registro_horometros'),
       where('fecha', '>=', `${fechaHoy}T00:00:00`),
@@ -400,8 +499,6 @@ const F1315 = () => {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data() as RegistroCard;
-
-        // Agregar operario a la lista de registrados hoy
         if (data.operatorCode && !operarios.includes(data.operatorCode)) {
           operarios.push(data.operatorCode);
         }
@@ -417,7 +514,6 @@ const F1315 = () => {
     const fetchUltimosHorometros = async (): Promise<void> => {
       try {
         const snapshot = await getDocs(collection(db, 'registro_horometros'));
-
         const ultimos: Record<
           string,
           { fecha: string; horometroFinal: string }
@@ -425,10 +521,8 @@ const F1315 = () => {
 
         snapshot.forEach((doc) => {
           const data = doc.data() as RegistroCard;
-
           data.machines.forEach((machine) => {
             const clave = machine.machine;
-
             const registroActual = ultimos[clave];
 
             if (
@@ -504,110 +598,6 @@ const F1315 = () => {
   useEffect(() => {
     fetchStandards();
   }, []);
-
-  // Función para analizar la productividad
-  const analyzeProductivity = (
-    registro: RegistroCard
-  ): ProductivityAnalysis[] => {
-    const analysis: ProductivityAnalysis[] = [];
-
-    registro.machines.forEach((machine) => {
-      const machineAnalysis: ProductivityAnalysis = {
-        machine: machine.machine,
-        issues: [],
-        recommendations: [],
-        efficiency: 0
-      };
-
-      // Calcular horas trabajadas
-      const horasTrabajadas =
-        parseFloat(machine.horometroFinal) -
-        parseFloat(machine.horometroInicial);
-
-      // Obtener el estándar de la máquina
-      const standard = standards[machine.machine];
-
-      if (standard) {
-        const standardEfficiency = parseFloat(standard.efficiency);
-        const horasAsignadas =
-          typeof machine.horasAsignadas === 'string'
-            ? parseFloat(machine.horasAsignadas)
-            : (machine.horasAsignadas as number);
-
-        // Calcular eficiencia
-        machineAnalysis.efficiency =
-          (horasTrabajadas / (standardEfficiency * horasAsignadas)) * 100;
-
-        // Detectar problemas basados en la eficiencia
-        if (machineAnalysis.efficiency < 70) {
-          machineAnalysis.issues.push(
-            `Baja eficiencia (${machineAnalysis.efficiency.toFixed(2)}%)`
-          );
-          machineAnalysis.recommendations.push('Revisar proceso de operación');
-          machineAnalysis.recommendations.push(
-            'Verificar estado de la máquina'
-          );
-          machineAnalysis.recommendations.push(
-            'Capacitar al operario en mejores prácticas'
-          );
-        }
-      }
-
-      // Analizar paradas mayores
-      const paradasMayores = parseFloat(machine.paradasMayores);
-      if (paradasMayores > 60) {
-        machineAnalysis.issues.push(
-          `Tiempo excesivo de paradas (${paradasMayores} minutos)`
-        );
-        machineAnalysis.recommendations.push(
-          'Programar mantenimiento preventivo'
-        );
-        machineAnalysis.recommendations.push(
-          'Revisar planificación de producción'
-        );
-      }
-
-      // Analizar observaciones para detectar problemas comunes
-      if (machine.observaciones) {
-        const obs = machine.observaciones.toLowerCase();
-
-        if (obs.includes('mantenimiento') || obs.includes('reparación')) {
-          machineAnalysis.issues.push('Problemas de mantenimiento reportados');
-          machineAnalysis.recommendations.push(
-            'Crear plan de mantenimiento preventivo'
-          );
-        }
-
-        if (obs.includes('lubricación') || obs.includes('aceite')) {
-          machineAnalysis.issues.push('Problemas de lubricación');
-          machineAnalysis.recommendations.push(
-            'Revisar sistema de lubricación'
-          );
-          machineAnalysis.recommendations.push(
-            'Establecer programa de lubricación'
-          );
-        }
-
-        if (
-          obs.includes('electric') ||
-          obs.includes('corriente') ||
-          obs.includes('voltaje')
-        ) {
-          machineAnalysis.issues.push('Problemas eléctricos');
-          machineAnalysis.recommendations.push('Revisar instalación eléctrica');
-          machineAnalysis.recommendations.push(
-            'Verificar estabilizadores de voltaje'
-          );
-        }
-      }
-
-      if (machineAnalysis.issues.length > 0) {
-        analysis.push(machineAnalysis);
-      }
-    });
-
-    return analysis;
-  };
 
   const handleSearch = (value: string): void => {
     setOperatorCode(value);
@@ -768,7 +758,6 @@ const F1315 = () => {
         return;
       }
 
-      // Validar campos numéricos
       if (
         machine.horometroInicial === '' ||
         isNaN(Number(machine.horometroInicial)) ||
@@ -785,7 +774,6 @@ const F1315 = () => {
         return;
       }
 
-      // Validar que el horómetro final no sea menor que el inicial
       if (Number(machine.horometroFinal) < Number(machine.horometroInicial)) {
         alert(
           `El horómetro final no puede ser menor que el inicial en la máquina: ${machine.machine}`
@@ -793,7 +781,6 @@ const F1315 = () => {
         return;
       }
 
-      // Validar referencia
       if (!machine.reference?.toString().trim()) {
         alert(
           `Debe seleccionar una referencia para la máquina: ${machine.machine}`
@@ -815,16 +802,7 @@ const F1315 = () => {
 
     try {
       await addDoc(collection(db, 'registro_horometros'), payload);
-
-      // Analizar productividad después de enviar
-      const analysis = analyzeProductivity(registro);
-      setProductivityAnalysis(analysis);
       setUltimoOperarioRegistrado(registro.operatorCode);
-
-      if (analysis.length > 0) {
-        setShowAnalysis(true);
-      }
-
       alert('✅ Registro enviado correctamente');
 
       // Eliminar el registro de la lista local
@@ -845,13 +823,10 @@ const F1315 = () => {
   // hora colombia
   const obtenerFechaColombia = (): string => {
     const now = new Date();
-
-    // Ajustar a hora local de Bogotá
     const offset = -5; // UTC-5
     const utc = now.getTime() + now.getTimezoneOffset() * 60000;
     const bogotaTime = new Date(utc + offset * 3600000);
 
-    // Formatear en ISO pero sin la Z (hora local)
     const year = bogotaTime.getFullYear();
     const month = String(bogotaTime.getMonth() + 1).padStart(2, '0');
     const day = String(bogotaTime.getDate()).padStart(2, '0');
@@ -862,278 +837,414 @@ const F1315 = () => {
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   };
 
+  // Toggle fullscreen mode
+  const toggleFullscreen = () => {
+    setIsFormFullscreen(!isFormFullscreen);
+    if (!isFormFullscreen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center p-5 w-full bg-gray-200 rounded-2xl backgroundForm">
-      {/* PANEL DE CONFIRMACIÓN DE ENVÍO */}
-      {ultimoOperarioRegistrado && (
-        <div className="w-full max-w-2xl mb-4 bg-green-600 p-3 border-white rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <span className="text-white text-lg mr-2">✅</span>
-              <span className="text-white font-semibold">
-                Registro enviado exitosamente para el operario:{' '}
-                {ultimoOperarioRegistrado}
-              </span>
-            </div>
-            <button
-              onClick={() => setUltimoOperarioRegistrado('')}
-              className="text-white text-lg"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
+    <div
+      className={`${isFormFullscreen ? 'fixed inset-0 z-50 bg-white overflow-y-auto' : 'min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'}`}
+    >
+      {/* Contenedor principal */}
+      <div className={`${isFormFullscreen ? 'p-0' : 'p-4'}`}>
+        {/* Header del formulario */}
+        <div
+          className={`${isFormFullscreen ? 'sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg' : 'mb-6'}`}
+        >
+          <div className={`${isFormFullscreen ? 'p-6 text-white' : ''}`}>
+            <div className="flex justify-between items-center">
+              <div>
+                <h1
+                  className={`font-bold ${isFormFullscreen ? 'text-2xl' : 'text-xl'} text-gray-800`}
+                >
+                  📋 Formulario de Registro de Horómetros
+                </h1>
+                <p
+                  className={`${isFormFullscreen ? 'text-blue-100' : 'text-gray-600'} text-sm mt-1`}
+                >
+                  Complete todos los campos para registrar las horas de trabajo
+                  de las máquinas
+                </p>
+              </div>
 
-      {/* Panel de estado compacto */}
-      <div className="w-full max-w-2xl mb-4 bg-blue-900 p-2 border-white rounded-lg">
-        <div className="flex justify-between items-center">
-          <h3
-            className="text-sm font-semibold text-white cursor-pointer"
-            onClick={() => setShowStatusPanel(!showStatusPanel)}
-          >
-            Estado de registros hoy ({operariosRegistradosHoy.length}/
-            {assignMachineUser.length})
-          </h3>
-          <span
-            className="text-xs text-white cursor-pointer"
-            onClick={() => setShowStatusPanel(!showStatusPanel)}
-          >
-            {showStatusPanel ? '▲' : '▼'}
-          </span>
-        </div>
-
-        {showStatusPanel && (
-          <div className="mt-2 grid grid-cols-4 gap-1">
-            {assignMachineUser.map((operario) => {
-              const haRegistrado = operariosRegistradosHoy.includes(
-                operario.operator
-              );
-
-              return (
-                <div
-                  key={operario.id}
-                  className="flex items-center p-1 bg-blue-800 rounded"
+              <div className="flex items-center space-x-2">
+                {/* Botón de pantalla completa */}
+                <button
+                  onClick={toggleFullscreen}
+                  className={`p-2 rounded-lg ${isFormFullscreen ? 'bg-blue-800 text-white hover:bg-blue-900' : 'bg-blue-500 text-white hover:bg-blue-600'} transition-colors`}
                   title={
-                    operario.operator +
-                    (haRegistrado
-                      ? ' - Ya registró hoy'
-                      : ' - No ha registrado hoy')
+                    isFormFullscreen
+                      ? 'Salir de pantalla completa'
+                      : 'Pantalla completa'
                   }
                 >
-                  <EstadoRegistroGlobo
-                    operario={operario.operator}
-                    operariosRegistradosHoy={operariosRegistradosHoy}
-                  />
-                  <span className="ml-1 text-xs text-white truncate">
-                    {operario.operator}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Panel de análisis de productividad */}
-      {showAnalysis && productivityAnalysis.length > 0 && (
-        <div className="w-full max-w-2xl mb-4 bg-yellow-800 p-4 border-white rounded-lg">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-semibold text-white">
-              Análisis de Productividad
-            </h3>
-            <button
-              onClick={() => setShowAnalysis(false)}
-              className="text-white text-lg"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {productivityAnalysis.map((analysis, index) => (
-              <div key={index} className="bg-yellow-100 p-3 rounded-lg">
-                <h4 className="font-semibold text-yellow-800 mb-2">
-                  Máquina: {analysis.machine}
-                  {analysis.efficiency > 0 && (
-                    <span className="ml-2 text-sm">
-                      (Eficiencia: {analysis.efficiency.toFixed(2)}%)
-                    </span>
+                  {isFormFullscreen ? (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"
+                      />
+                    </svg>
                   )}
-                </h4>
+                </button>
 
-                {analysis.issues.length > 0 && (
-                  <div className="mb-2">
-                    <h5 className="font-medium text-red-600">
-                      Problemas detectados:
-                    </h5>
-                    <ul className="list-disc list-inside text-red-700">
-                      {analysis.issues.map((issue, i) => (
-                        <li key={i}>{issue}</li>
-                      ))}
-                    </ul>
-                  </div>
+                {isFormFullscreen && (
+                  <button
+                    onClick={toggleFullscreen}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    Salir de pantalla completa
+                  </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
 
-                {analysis.recommendations.length > 0 && (
+        {/* Contenido principal con scroll */}
+        <div className={`${isFormFullscreen ? 'p-6 max-w-7xl mx-auto' : ''}`}>
+          {/* PANEL DE CONFIRMACIÓN DE ENVÍO */}
+          {ultimoOperarioRegistrado && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-xl">✅</span>
+                  </div>
                   <div>
-                    <h5 className="font-medium text-green-600">
-                      Recomendaciones:
-                    </h5>
-                    <ul className="list-disc list-inside text-green-700">
-                      {analysis.recommendations.map((rec, i) => (
-                        <li key={i}>{rec}</li>
-                      ))}
-                    </ul>
+                    <p className="font-semibold">
+                      Registro enviado exitosamente
+                    </p>
+                    <p className="text-green-100">
+                      Operario: {ultimoOperarioRegistrado}
+                    </p>
                   </div>
-                )}
+                </div>
+                <button
+                  onClick={() => setUltimoOperarioRegistrado('')}
+                  className="text-white hover:text-green-200 text-lg"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Panel de estado compacto */}
+          <div className="mb-6 bg-gradient-to-r from-blue-800 to-blue-900 p-4 rounded-xl shadow-lg text-white">
+            <div
+              className="flex justify-between items-center cursor-pointer"
+              onClick={() => setShowStatusPanel(!showStatusPanel)}
+            >
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                  <span>👥</span>
+                </div>
+                <div>
+                  <h3 className="font-semibold">Estado de registros hoy</h3>
+                  <p className="text-blue-200 text-sm">
+                    {operariosRegistradosHoy.length}/{assignMachineUser.length}{' '}
+                    operarios registrados
+                  </p>
+                </div>
+              </div>
+              <span className="text-blue-200">
+                {showStatusPanel ? '▲' : '▼'}
+              </span>
+            </div>
+
+            {showStatusPanel && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
+                {assignMachineUser.map((operario) => {
+                  const haRegistrado = operariosRegistradosHoy.includes(
+                    operario.operator
+                  );
+
+                  return (
+                    <div
+                      key={operario.id}
+                      className={`p-2 rounded-lg flex items-center ${haRegistrado ? 'bg-green-900/50' : 'bg-red-900/50'}`}
+                      title={
+                        operario.operator +
+                        (haRegistrado
+                          ? ' - Ya registró hoy'
+                          : ' - No ha registrado hoy')
+                      }
+                    >
+                      <EstadoRegistroGlobo
+                        operario={operario.operator}
+                        operariosRegistradosHoy={operariosRegistradosHoy}
+                      />
+                      <span className="ml-2 text-sm truncate">
+                        {operario.operator}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Formulario de búsqueda */}
+          <div className="mb-8 p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border border-gray-200">
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                <span className="text-white text-xl">🔍</span>
+              </div>
+              <h2 className="text-xl font-bold text-gray-800">
+                Búsqueda de Operario
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-gray-700 font-semibold">
+                    Código de operario
+                  </label>
+                  {operatorCode && (
+                    <div className="flex items-center">
+                      <EstadoRegistroGlobo
+                        operario={operatorCode}
+                        operariosRegistradosHoy={operariosRegistradosHoy}
+                      />
+                      <span
+                        className={`ml-2 text-sm font-medium ${operariosRegistradosHoy.includes(operatorCode) ? 'text-green-600' : 'text-yellow-600'}`}
+                      >
+                        {operariosRegistradosHoy.includes(operatorCode)
+                          ? 'Registrado'
+                          : 'Pendiente'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  value={operatorCode}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="Ingrese el código del operario"
+                  className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 bg-white shadow-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">
+                    Fecha de registro
+                  </label>
+                  <input
+                    type="date"
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 bg-white shadow-sm"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    onClick={handleAddRegistro}
+                    className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+                  >
+                    <span className="mr-2">👁️</span>
+                    Ver mis máquinas asignadas
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de registros */}
+          <div className="space-y-6">
+            {registros.map((registro) => (
+              <div
+                key={registro.id}
+                className="bg-gradient-to-br from-white to-gray-50 border-2 border-blue-200 rounded-2xl shadow-2xl overflow-hidden"
+              >
+                {/* Header del registro */}
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-5 text-white">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3">
+                          <span className="text-xl">📅</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-lg">
+                            Fecha: {registro.fecha}
+                          </p>
+                          <p className="text-blue-100">
+                            Código: {registro.operatorCode}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center mr-2">
+                          <span className="text-sm">🏭</span>
+                        </div>
+                        <p className="text-blue-100">
+                          {registro.machines.length} máquina
+                          {registro.machines.length !== 1 ? 's' : ''} asignada
+                          {registro.machines.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleEnviarRegistro(registro.id)}
+                      disabled={registrosEnProceso.has(registro.id)}
+                      className={`px-6 py-3 rounded-xl font-semibold text-lg shadow-lg transition-all duration-200 flex items-center ${
+                        registrosEnProceso.has(registro.id)
+                          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white hover:shadow-xl'
+                      }`}
+                    >
+                      {registrosEnProceso.has(registro.id) ? (
+                        <>
+                          <span className="mr-2">⏳</span>
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <span className="mr-2">🚀</span>
+                          Enviar Registro
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* LISTA DE MÁQUINAS */}
+                <div className="p-6">
+                  {registro.machines.map((machine, index) => (
+                    <MachineCard
+                      key={index}
+                      machine={machine}
+                      index={index}
+                      registro={registro}
+                      onUpdate={(idx, field, value) =>
+                        handleMachineUpdate(registro.id, idx, field, value)
+                      }
+                      standards={standards}
+                      referencias={referencias}
+                    />
+                  ))}
+                </div>
+
+                {/* INSTRUCCIONES */}
+                <div className="p-6 bg-gradient-to-r from-yellow-50 to-amber-50 border-t border-yellow-200">
+                  <div className="flex items-center mb-4">
+                    <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center mr-3">
+                      <span className="text-white text-xl">📋</span>
+                    </div>
+                    <h5 className="font-bold text-gray-800 text-lg">
+                      Instrucciones importantes:
+                    </h5>
+                  </div>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span className="text-gray-700">
+                        Verifica que estás ingresando datos en la máquina
+                        correcta
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span className="text-gray-700">
+                        El horómetro final debe ser mayor al inicial
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span className="text-gray-700">
+                        Las horas trabajadas no pueden exceder 16 horas
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span className="text-gray-700">
+                        Completa todos los campos antes de enviar
+                      </span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-yellow-600 mr-2">•</span>
+                      <span className="text-gray-700">
+                        Solo puedes enviar un registro por día
+                      </span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="mt-3 p-2 bg-yellow-200 rounded">
-            <h5 className="font-semibold text-yellow-800">
-              Estrategias generales para mejorar la productividad:
-            </h5>
-            <ul className="list-disc list-inside text-yellow-900 pl-4">
-              <li>Implementar mantenimiento preventivo programado</li>
-              <li>Capacitar operarios en técnicas de eficiencia</li>
-              <li>Establecer protocolos rápidos para resolver paradas</li>
-              <li>
-                Crear banco de repuestos críticos para reducir tiempos de espera
-              </li>
-              <li>
-                Implementar sistema de alertas tempranas para fallas recurrentes
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
-
-      <div className="mb-4 w-full max-w-2xl">
-        <div className="flex items-center justify-between">
-          <label className="block text-white text-xs font-bold mb-2 uppercase tracking-wide">
-            Buscar código de operario
-          </label>
-          {operatorCode && (
-            <div className="flex items-center">
-              <EstadoRegistroGlobo
-                operario={operatorCode}
-                operariosRegistradosHoy={operariosRegistradosHoy}
-              />
-              <span className="ml-1 text-xs text-white">
-                {operariosRegistradosHoy.includes(operatorCode)
-                  ? 'Registrado'
-                  : 'Pendiente'}
-              </span>
+          {/* Mensaje cuando no hay registros */}
+          {registros.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl">📝</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                No hay registros pendientes
+              </h3>
+              <p className="text-gray-600 max-w-md mx-auto">
+                Ingresa el código del operario, selecciona la fecha y haz clic
+                en "Ver mis máquinas" para comenzar.
+              </p>
             </div>
           )}
         </div>
-
-        <input
-          type="number"
-          value={operatorCode}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Código de operario"
-          className="block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-2 no-spinner"
-        />
-
-        {/* Seleccionar fecha */}
-        <div className="flex flex-wrap -mx-3 mb-6">
-          <div className="w-full md:w-1/2 px-3">
-            <label className="block text-white text-xs font-bold mb-2 uppercase tracking-wide">
-              Fecha de registro
-            </label>
-            <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="block w-full bg-gray-200 text-blue-950 border border-blue-950 rounded py-3 px-4 mb-2 no-spinner"
-            />
-          </div>
-        </div>
-        <button
-          onClick={handleAddRegistro}
-          className="w-full py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700 transition"
-        >
-          Ver mis maquinas
-        </button>
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleAddRegistro();
-        }}
-        className="w-full max-w-2xl"
-      >
-        {registros.map((registro) => (
-          <div
-            key={registro.id}
-            className="border-2 border-blue-500 p-4 mb-6 bg-white rounded-lg shadow-lg"
+      {/* Botón flotante para pantalla completa */}
+      {!isFormFullscreen && (
+        <button
+          onClick={toggleFullscreen}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all duration-300 z-40"
+          title="Pantalla completa para mejor visibilidad"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <div className="flex justify-between items-center mb-4 p-3 bg-blue-50 rounded border border-blue-200">
-              <div>
-                <p className="font-semibold text-blue-900">
-                  📅 Fecha: {registro.fecha}
-                </p>
-                <p className="font-semibold text-blue-900">
-                  👤 Código: {registro.operatorCode}
-                </p>
-                <p className="text-sm text-blue-700">
-                  🏭 Máquinas asignadas: {registro.machines.length}
-                </p>
-              </div>
-              <button
-                onClick={() => handleEnviarRegistro(registro.id)}
-                disabled={registrosEnProceso.has(registro.id)}
-                className={`px-4 py-2 rounded font-semibold transition ${
-                  registrosEnProceso.has(registro.id)
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-              >
-                {registrosEnProceso.has(registro.id)
-                  ? '⏳ Enviando...'
-                  : '🚀 Enviar Registro'}
-              </button>
-            </div>
-
-            {/* LISTA MEJORADA DE MÁQUINAS */}
-            <div className="space-y-4">
-              {registro.machines.map((machine, index) => (
-                <MachineCard
-                  key={index}
-                  machine={machine}
-                  index={index}
-                  registro={registro}
-                  onUpdate={(idx, field, value) =>
-                    handleMachineUpdate(registro.id, idx, field, value)
-                  }
-                  standards={standards}
-                  referencias={referencias}
-                />
-              ))}
-            </div>
-
-            {/* INSTRUCCIONES VISIBLES */}
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-              <h5 className="font-semibold text-yellow-800 mb-2">
-                📋 Instrucciones importantes:
-              </h5>
-              <ul className="text-sm text-yellow-700 list-disc list-inside space-y-1">
-                <li>
-                  Verifica que estás ingresando datos en la máquina correcta
-                </li>
-                <li>El horómetro final debe ser mayor al inicial</li>
-                <li>Las horas trabajadas no pueden exceder 16 horas</li>
-                <li>Completa todos los campos antes de enviar</li>
-                <li>Solo puedes enviar un registro por día</li>
-              </ul>
-            </div>
-          </div>
-        ))}
-      </form>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 };
