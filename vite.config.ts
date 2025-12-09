@@ -5,6 +5,10 @@ import tailwindcss from '@tailwindcss/vite';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true
+  },
 
   // Optimizaciones para Firebase
   optimizeDeps: {
@@ -19,14 +23,14 @@ export default defineConfig({
   },
 
   // Configuración de build
-  build: {
-    commonjsOptions: {
-      transformMixedEsModules: true
-    },
-    rollupOptions: {
-      external: []
-    }
-  },
+  // build: {
+  //   commonjsOptions: {
+  //     transformMixedEsModules: true
+  //   },
+  //   rollupOptions: {
+  //     external: []
+  //   }
+  // },
 
   // Resolución de módulos
   resolve: {
